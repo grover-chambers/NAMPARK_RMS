@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { Prisma } from "@prisma/client";
+
+type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
 
   const now = new Date();
 
-  await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+  await prisma.$transaction(async (tx: TxClient) => {
     // Upsert SalesRepShift
     const shiftData = {
       shiftOpen: shiftOpen ? new Date(shiftOpen) : null,
