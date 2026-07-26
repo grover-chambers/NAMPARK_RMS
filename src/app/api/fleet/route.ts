@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { Vehicle } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -37,10 +36,10 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const active = vehicles.filter((v: Vehicle) => v.status === "ACTIVE").length;
-    const inGarage = vehicles.filter((v: Vehicle) => v.status === "IN_GARAGE").length;
+    const active = vehicles.filter((v) => v.status === "ACTIVE").length;
+    const inGarage = vehicles.filter((v) => v.status === "IN_GARAGE").length;
     const maintenance = vehicles.filter(
-      (v: Vehicle) => v.status === "MAINTENANCE"
+      (v) => v.status === "MAINTENANCE"
     ).length;
 
     return NextResponse.json({
