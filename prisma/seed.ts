@@ -17,7 +17,7 @@ async function main() {
     update: {},
     create: {
       email: "admin@nampark.com",
-      name: "Brayan Odira",
+      name: "Madam Sophie",
       password: adminHash,
       role: "ADMIN",
     },
