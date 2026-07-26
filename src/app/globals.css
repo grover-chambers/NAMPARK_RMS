@@ -283,3 +283,116 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #006666;
 }
+
+/* ── Login Page ── */
+.route-line {
+  fill: none;
+  stroke: #C9A227;
+  stroke-width: 1;
+  stroke-dasharray: 4 7;
+  animation: dash 26s linear infinite;
+}
+.route-line-slow {
+  fill: none;
+  stroke: #C9A227;
+  stroke-width: 1;
+  stroke-dasharray: 4 7;
+  animation: dash 40s linear infinite;
+  opacity: 0.6;
+}
+.route-line-dashed {
+  fill: none;
+  stroke: #C9A227;
+  stroke-width: 1;
+  stroke-dasharray: 2 6;
+  animation: dash 26s linear infinite;
+}
+.route-node {
+  fill: #C9A227;
+  opacity: 0.7;
+}
+@keyframes dash {
+  to { stroke-dashoffset: -400; }
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #C9A227;
+  animation: pulse 2.2s ease-out infinite;
+}
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(201,162,39,0.5); }
+  70% { box-shadow: 0 0 0 6px rgba(201,162,39,0); }
+  100% { box-shadow: 0 0 0 0 rgba(201,162,39,0); }
+}
+
+.login-card {
+  background: #141C18;
+  border: 1px solid #26312B;
+  border-top: 2px solid #C9A227;
+  padding: 32px 30px 26px;
+}
+
+.login-input {
+  width: 100%;
+  background: #182019;
+  border: 1px solid #26312B;
+  color: #EDE8DD;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  padding: 11px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.login-input::placeholder {
+  color: #5C665F;
+}
+.login-input:focus {
+  border-color: #8E7420;
+}
+
+.pw-toggle {
+  position: absolute;
+  right: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: #5C665F;
+  cursor: pointer;
+  padding: 4px;
+}
+.pw-toggle:hover {
+  color: #8A9690;
+}
+
+.login-submit {
+  width: 100%;
+  background: #C9A227;
+  color: #151009;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 12px;
+  cursor: pointer;
+  letter-spacing: 0.2px;
+  transition: background 0.15s, transform 0.1s;
+}
+.login-submit:hover {
+  background: #DBB233;
+}
+.login-submit:active {
+  transform: scale(0.99);
+}
+.login-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.divider {
+  border-top: 1px solid #26312B;
+  margin: 22px 0 14px;
+}
