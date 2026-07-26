@@ -10,6 +10,8 @@ import {
   AlertTriangle,
   MessageSquare,
   Clock,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import {
   formatCurrency,
@@ -41,16 +43,20 @@ interface MissingItem {
   notes: string | null;
 }
 
-interface Shift {
-  shiftOpen: string | null;
-  shiftClose: string | null;
-  customerCountTarget: number;
-  customerCountActual: number;
-  salesTarget: number;
-  salesActual: number;
-  complaints: number;
-  reportSubmissionTime: string | null;
-  comments: string | null;
+interface KPIData {
+  metric: string;
+  target: number | string;
+  actual: number | string;
+  status: "MET" | "NOT MET";
+  reason?: string;
+  display?: string;
+}
+
+interface ShiftTiming {
+  label: string;
+  target?: string;
+  actual: string | null;
+  status: "Early" | "Late" | "On time" | "N/A";
 }
 
 interface DriverShift {
@@ -64,16 +70,21 @@ interface DriverShift {
   comments: string | null;
 }
 
-interface RouteReport {
-  id: string;
-  route: { id: string; name: string; targetDaily: number };
+interface ComputedReport {
+  route: { id: string; name: string };
   salesRep: { id: string; name: string };
   driver: { id: string; name: string };
   vehicle: { id: string; registration: string };
-  shift: Shift;
-  driverShift: DriverShift;
+  date: string;
+  kpiStatus: "MET" | "NOT MET";
+  attainment: number;
+  customerCountDisplay: string;
+  kpis: KPIData[];
+  shiftTimings: ShiftTiming[];
+  comments: string | null;
   orders: Order[];
   missingItems: MissingItem[];
+  driverShift: DriverShift;
   summary: {
     totalOrders: number;
     totalOrderSales: number;
@@ -92,7 +103,7 @@ function toISODate(d: Date): string {
 
 export default function DailyReportViewPage() {
   const [selectedDate, setSelectedDate] = useState(toISODate(new Date()));
-  const [reports, setReports] = useState<RouteReport[]>([]);
+  const [reports, setReports] = useState<ComputedReport[]>([]);
   const [loading, setLoading] = useState(true);
 
   const abortRef = useRef<AbortController | null>(null);
@@ -119,10 +130,6 @@ export default function DailyReportViewPage() {
     const d = new Date(selectedDate);
     d.setDate(d.getDate() + delta);
     setSelectedDate(toISODate(d));
-  };
-
-  const handlePrint = () => {
-    window.print();
   };
 
   return (
@@ -213,8 +220,8 @@ export default function DailyReportViewPage() {
         </div>
       ) : (
         <div className="space-y-6 print:space-y-4">
-          {reports.map((report) => (
-            <RouteReportCard key={report.id} report={report} date={selectedDate} />
+          {reports.map((report, idx) => (
+            <RouteReportCard key={`${report.route.id}-${idx}`} report={report} date={selectedDate} />
           ))}
         </div>
       )}
@@ -222,8 +229,8 @@ export default function DailyReportViewPage() {
   );
 }
 
-function RouteReportCard({ report, date }: { report: RouteReport; date: string }) {
-  const { shift, driverShift, route, salesRep, driver, vehicle, missingItems, summary } = report;
+function RouteReportCard({ report, date }: { report: ComputedReport; date: string }) {
+  const { kpis, shiftTimings, route, salesRep, driver, vehicle, missingItems, summary, kpiStatus, comments, driverShift } = report;
   const formattedDate = new Date(date).toLocaleDateString("en-KE", {
     weekday: "short",
     day: "numeric",
@@ -231,10 +238,12 @@ function RouteReportCard({ report, date }: { report: RouteReport; date: string }
     year: "numeric",
   });
 
-  const customerAttainment =
-    shift.customerCountTarget > 0
-      ? Math.round((shift.customerCountActual / shift.customerCountTarget) * 100)
-      : 0;
+  const shiftOpen = shiftTimings.find((t) => t.label === "Shift Open");
+  const shiftClose = shiftTimings.find((t) => t.label === "Shift Close");
+  const customerCount = kpis.find((k) => k.metric === "Customer Count");
+  const salesKpi = kpis.find((k) => k.metric === "Sales");
+  const complaintsKpi = kpis.find((k) => k.metric === "Complaints");
+  const reportSubmission = kpis.find((k) => k.metric === "Report Submission");
 
   return (
     <div className="card overflow-hidden print:shadow-none print:border print:break-inside-avoid">
@@ -246,8 +255,18 @@ function RouteReportCard({ report, date }: { report: RouteReport; date: string }
               Daily Activity Report
             </h2>
           </div>
-          <div className="text-right text-xs opacity-90">
-            <p className="font-semibold">{route.name}</p>
+          <div className="flex items-center gap-3">
+            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold ${
+              kpiStatus === "MET"
+                ? "bg-green-500/20 text-green-100 border border-green-400/30"
+                : "bg-red-500/20 text-red-100 border border-red-400/30"
+            }`}>
+              {kpiStatus === "MET" ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+              KPI {kpiStatus}
+            </span>
+            <div className="text-right text-xs opacity-90">
+              <p className="font-semibold">{route.name}</p>
+            </div>
           </div>
         </div>
       </div>
@@ -291,30 +310,30 @@ function RouteReportCard({ report, date }: { report: RouteReport; date: string }
               <tbody>
                 <KpiRow
                   label="Shift Account Opening"
-                  value={shift.shiftOpen ? formatTimeShort(shift.shiftOpen) : "—"}
+                  value={shiftOpen?.actual ? formatTimeShort(shiftOpen.actual) : "—"}
                 />
                 <KpiRow
                   label="Shift Account Closing"
-                  value={shift.shiftClose ? formatTimeShort(shift.shiftClose) : "—"}
+                  value={shiftClose?.actual ? formatTimeShort(shiftClose.actual) : "—"}
                   highlight={false}
                 />
                 <KpiRow
                   label="Customer Count"
-                  value={`${shift.customerCountActual} / ${shift.customerCountTarget}`}
+                  value={customerCount?.display ?? `${customerCount?.actual ?? 0} / ${customerCount?.target ?? 0}`}
                   badge={
-                    shift.customerCountTarget > 0 ? (
-                      <span className={`text-xs font-semibold ${getPerformanceColor(customerAttainment)}`}>
-                        ({customerAttainment}%)
+                    customerCount ? (
+                      <span className={`text-xs font-semibold ${customerCount.status === "MET" ? "text-green-600" : "text-red-600"}`}>
+                        ({customerCount.status})
                       </span>
                     ) : undefined
                   }
                 />
                 <KpiRow
                   label="Sales"
-                  value={`${formatCurrency(shift.salesActual)} / ${formatCurrency(shift.salesTarget)}`}
+                  value={`${formatCurrency(summary.salesActual)} / ${formatCurrency(summary.salesTarget)}`}
                   badge={
-                    shift.salesTarget > 0 ? (
-                      <span className={`text-xs font-semibold ${getPerformanceColor(summary.attainment)}`}>
+                    salesKpi ? (
+                      <span className={`text-xs font-semibold ${summary.attainment >= 100 ? "text-green-600" : "text-red-600"}`}>
                         ({summary.attainment}%)
                       </span>
                     ) : undefined
@@ -322,16 +341,17 @@ function RouteReportCard({ report, date }: { report: RouteReport; date: string }
                 />
                 <KpiRow
                   label="Customer Complaints"
-                  value={String(shift.complaints)}
-                  valueClassName={shift.complaints > 0 ? "text-red-600 font-semibold" : ""}
+                  value={String(complaintsKpi?.actual ?? 0)}
+                  valueClassName={(complaintsKpi?.actual as number) > 0 ? "text-red-600 font-semibold" : ""}
                 />
                 <KpiRow
                   label="Report Submission Time"
                   value={
-                    shift.reportSubmissionTime
-                      ? formatTimeShort(shift.reportSubmissionTime)
-                      : "—"
+                    reportSubmission?.actual === "Submitted"
+                      ? "Submitted"
+                      : "Not submitted"
                   }
+                  valueClassName={reportSubmission?.status === "MET" ? "text-green-600" : "text-red-600"}
                 />
               </tbody>
             </table>
@@ -339,14 +359,14 @@ function RouteReportCard({ report, date }: { report: RouteReport; date: string }
         </div>
 
         {/* Comments */}
-        {shift.comments && (
+        {comments && (
           <div>
             <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2 flex items-center gap-1.5">
               <MessageSquare size={12} />
               Comments
             </h3>
             <div className="bg-slate-50 border border-slate-200 rounded-lg px-4 py-3 text-sm text-slate-600">
-              {shift.comments}
+              {comments}
             </div>
           </div>
         )}
@@ -462,12 +482,12 @@ function RouteReportCard({ report, date }: { report: RouteReport; date: string }
             />
             <SummaryStat
               label="Complaints"
-              value={String(shift.complaints)}
-              valueClassName={shift.complaints > 0 ? "text-red-600" : ""}
+              value={String(complaintsKpi?.actual ?? 0)}
+              valueClassName={(complaintsKpi?.actual as number) > 0 ? "text-red-600" : ""}
             />
             <SummaryStat
               label="Target"
-              value={formatCurrency(shift.salesTarget)}
+              value={formatCurrency(summary.salesTarget)}
             />
           </div>
         </div>

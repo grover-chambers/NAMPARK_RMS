@@ -70,6 +70,7 @@ export async function GET(request: NextRequest) {
       { routeName: string; totalReturns: number; totalAmount: number }
     > = {};
 
+    let totalQuantity = 0;
     for (const ret of returns) {
       const rId = ret.driverShift.assignment.routeId;
       const rName = ret.driverShift.assignment.route.name;
@@ -78,12 +79,14 @@ export async function GET(request: NextRequest) {
       }
       byRoute[rId].totalReturns += ret.quantity;
       byRoute[rId].totalAmount += ret.amount;
+      totalQuantity += ret.quantity;
     }
 
     return NextResponse.json({
       success: true,
       data: {
-        totalReturns: returns.length,
+        totalReturns: totalQuantity,
+        totalRecords: returns.length,
         totalAmount: returns.reduce((sum, r) => sum + r.amount, 0),
         byRoute: Object.values(byRoute),
         items: returns,

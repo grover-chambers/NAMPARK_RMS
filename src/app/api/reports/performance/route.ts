@@ -4,13 +4,6 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { computeReport, computeWeeklyStats, type RouteReportData, type ComputedReport } from "@/lib/reports/analytics";
 
-function toDateKey(date: Date): string {
-  const y = date.getFullYear();
-  const m = String(date.getMonth() + 1).padStart(2, "0");
-  const d = String(date.getDate()).padStart(2, "0");
-  return `${y}-${m}-${d}`;
-}
-
 export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
@@ -21,29 +14,28 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { searchParams } = new URL(request.url);
-    const weekStr = searchParams.get("week");
+    const sp = new URL(request.url).searchParams;
+    const startDate = sp.get("startDate");
+    const endDate = sp.get("endDate");
+    const routeId = sp.get("routeId");
 
-    if (!weekStr) {
+    if (!startDate || !endDate) {
       return NextResponse.json(
-        { success: false, error: "week query parameter is required (YYYY-MM-DD)" },
+        { success: false, error: "startDate and endDate are required" },
         { status: 400 }
       );
     }
 
-    const weekStart = new Date(weekStr);
-    weekStart.setHours(0, 0, 0, 0);
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekEnd.getDate() + 6);
-    weekEnd.setHours(23, 59, 59, 999);
+    const where: any = {
+      date: {
+        gte: new Date(startDate),
+        lte: new Date(endDate),
+      },
+    };
+    if (routeId) where.routeId = routeId;
 
     const assignments = await prisma.dailyAssignment.findMany({
-      where: {
-        date: {
-          gte: weekStart,
-          lte: weekEnd,
-        },
-      },
+      where,
       include: {
         route: true,
         salesRep: true,
@@ -52,15 +44,11 @@ export async function GET(request: NextRequest) {
         salesRepShift: true,
         driverShift: {
           include: {
-            returns: {
-              include: { sku: true },
-            },
+            returns: { include: { sku: true } },
           },
         },
         orders: {
-          include: {
-            lines: { include: { sku: true } },
-          },
+          include: { lines: { include: { sku: true } } },
         },
         missingItems: {
           include: { sku: true },
@@ -85,7 +73,7 @@ export async function GET(request: NextRequest) {
 
       const reportData: RouteReportData = {
         id: a.id,
-        date: toDateKey(a.date),
+        date: a.date.toISOString(),
         route: { id: a.route.id, name: a.route.name, targetDaily: a.route.targetDaily },
         salesRep: { id: a.salesRep.id, name: a.salesRep.name },
         driver: { id: a.driver.id, name: a.driver.name },
@@ -191,111 +179,22 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.attainment - a.attainment);
 
-    const missingMap: Record<
-      string,
-      { skuName: string; count: number; cartonsAffected: number; customersAffected: number }
-    > = {};
-
-    for (const a of assignments) {
-      for (const m of a.missingItems) {
-        const key = m.skuId;
-        if (!missingMap[key]) {
-          missingMap[key] = {
-            skuName: m.sku.name,
-            count: 0,
-            cartonsAffected: 0,
-            customersAffected: 0,
-          };
-        }
-        missingMap[key].count++;
-        missingMap[key].cartonsAffected += m.cartonsAffected;
-        missingMap[key].customersAffected += m.customerCountAffected;
-      }
-    }
-
-    const missingItemsRanked = Object.values(missingMap)
-      .sort((a, b) => b.cartonsAffected - a.cartonsAffected);
-
-    const returnsByTypeMap: Record<string, { type: string; count: number; amount: number }> = {};
-    let totalReturnsValue = 0;
-
-    for (const a of assignments) {
-      if (!a.driverShift) continue;
-      for (const r of a.driverShift.returns) {
-        const t = r.type;
-        if (!returnsByTypeMap[t]) {
-          returnsByTypeMap[t] = { type: t, count: 0, amount: 0 };
-        }
-        returnsByTypeMap[t].count++;
-        returnsByTypeMap[t].amount += r.amount;
-        totalReturnsValue += r.amount;
-      }
-    }
-
-    const returnsByType = Object.values(returnsByTypeMap).sort(
-      (a, b) => b.amount - a.amount
-    );
-
-    const driverMap: Record<
-      string,
-      {
-        driverId: string;
-        driverName: string;
-        routes: number;
-        totalCustomers: number;
-        totalReturns: number;
-        totalReturnValue: number;
-        totalDelayMinutes: number;
-      }
-    > = {};
-
-    for (const a of assignments) {
-      const did = a.driverId;
-      if (!driverMap[did]) {
-        driverMap[did] = {
-          driverId: did,
-          driverName: a.driver.name,
-          routes: 0,
-          totalCustomers: 0,
-          totalReturns: 0,
-          totalReturnValue: 0,
-          totalDelayMinutes: 0,
-        };
-      }
-      const d = driverMap[did];
-      d.routes++;
-      d.totalCustomers += a.driverShift?.customerCountActual ?? 0;
-
-      if (a.driverShift) {
-        for (const r of a.driverShift.returns) {
-          d.totalReturns++;
-          d.totalReturnValue += r.amount;
-        }
-
-        if (a.driverShift.shiftStart && a.driverShift.shiftEnd) {
-          const start = new Date(a.driverShift.shiftStart).getTime();
-          const end = new Date(a.driverShift.shiftEnd).getTime();
-          const expectedMs = 10 * 60 * 60 * 1000;
-          const actualMs = end - start;
-          if (actualMs > expectedMs) {
-            d.totalDelayMinutes += Math.round((actualMs - expectedMs) / (60 * 1000));
-          }
-        }
-      }
-    }
-
-    const driverPerformance = Object.values(driverMap).sort(
-      (a, b) => b.totalCustomers - a.totalCustomers
-    );
-
     const dailyTrend: { day: string; sales: number; target: number }[] = [];
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(weekStart);
-      d.setDate(weekStart.getDate() + i);
-      const dayLabel = d.toLocaleDateString("en-KE", { weekday: "short", day: "numeric" });
-      const dayKey = toDateKey(d);
+    const startD = new Date(startDate);
+    const endD = new Date(endDate);
+    const totalDays = Math.round((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
-      const dayReports = computedReports.filter((cr) => cr.date === dayKey);
+    for (let i = 0; i < totalDays; i++) {
+      const d = new Date(startD);
+      d.setDate(startD.getDate() + i);
+      const dayLabel = d.toLocaleDateString("en-KE", { weekday: "short", day: "numeric" });
+      const dayStr = d.toISOString().split("T")[0];
+
+      const dayReports = computedReports.filter((cr) => {
+        const crDate = cr.date.split("T")[0];
+        return crDate === dayStr;
+      });
+
       const daySales = dayReports.reduce((sum, cr) => sum + cr.summary.salesActual, 0);
       const dayTarget = dayReports.reduce((sum, cr) => sum + cr.summary.salesTarget, 0);
       dailyTrend.push({ day: dayLabel, sales: daySales, target: dayTarget });
@@ -304,27 +203,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
-        week: { start: weekStart.toISOString(), end: weekEnd.toISOString() },
+        period: { startDate, endDate },
         overall: {
           totalSales: weeklyStats.totalSales,
           totalTarget: weeklyStats.totalTarget,
           avgAttainment: weeklyStats.avgAttainment,
-          totalMissingItemsValue: weeklyStats.totalMissingItems,
-          totalReturnsValue,
-          totalAssignments: assignments.length,
           totalComplaints: weeklyStats.totalComplaints,
+          totalMissingItems: weeklyStats.totalMissingItems,
+          totalCustomers: weeklyStats.totalCustomers,
+          metCount: weeklyStats.metCount,
+          notMetCount: weeklyStats.notMetCount,
+          totalAssignments: assignments.length,
         },
         routePerformance,
-        missingItemsRanked,
-        returnsByType,
-        driverPerformance,
         dailyTrend,
+        computedReports,
       },
     });
   } catch (error) {
-    console.error("Weekly executive report error:", error);
+    console.error("Performance report error:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to fetch weekly executive report" },
+      { success: false, error: "Failed to fetch performance report" },
       { status: 500 }
     );
   }

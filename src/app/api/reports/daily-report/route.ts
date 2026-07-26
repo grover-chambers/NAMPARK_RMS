@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { computeReport, type RouteReportData } from "@/lib/reports/analytics";
 
 export async function GET(request: NextRequest) {
   try {
@@ -65,7 +66,7 @@ export async function GET(request: NextRequest) {
       );
       const salesActual = shift?.salesActual ?? totalOrderSales;
       const salesTarget = assignment.route.targetDaily;
-      const customerCountTarget = shift?.customerCountTarget ?? (Math.round(assignment.route.targetDaily / 1000) || 0);
+      const customerCountTarget = shift?.customerCountTarget ?? 0;
       const customerCountActual = shift?.customerCountActual ?? 0;
       const missingItemsTotal = assignment.missingItems.length;
       const cartonsAffected = assignment.missingItems.reduce(
@@ -77,7 +78,7 @@ export async function GET(request: NextRequest) {
         0
       );
 
-      return {
+      const reportData: RouteReportData = {
         id: assignment.id,
         date: assignment.date.toISOString(),
         route: {
@@ -140,6 +141,8 @@ export async function GET(request: NextRequest) {
           customersAffected,
         },
       };
+
+      return computeReport(reportData);
     });
 
     return NextResponse.json({

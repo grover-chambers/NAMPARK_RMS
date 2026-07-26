@@ -23,24 +23,41 @@ import {
 import { formatCurrency, getWeekRange, getPerformanceColor, toCSVRow } from "@/lib/utils";
 import ExportBar from "@/components/reports/ExportBar";
 
-interface RouteItem {
-  id: string;
-  name: string;
-  targetDaily: number;
+interface RoutePerformance {
+  routeId: string;
+  routeName: string;
+  salesRepName: string;
+  target: number;
+  actual: number;
+  attainment: number;
+  customerCount: number;
+  complaints: number;
+  daysActive: number;
 }
 
-interface Assignment {
-  id: string;
-  date: string;
-  route: { id: string; name: string; targetDaily: number };
-  salesRep: { id: string; name: string };
-  driver: { id: string; name: string };
-  salesRepShift: {
-    customerCountActual: number;
-    salesActual: number;
-    complaints: number;
-  } | null;
-  orders: { totalAmount: number }[];
+interface DailyTrend {
+  day: string;
+  sales: number;
+  target: number;
+}
+
+interface OverallStats {
+  totalSales: number;
+  totalTarget: number;
+  avgAttainment: number;
+  totalComplaints: number;
+  totalMissingItems: number;
+  totalCustomers: number;
+  metCount: number;
+  notMetCount: number;
+  totalAssignments: number;
+}
+
+interface PerformanceData {
+  period: { startDate: string; endDate: string };
+  overall: OverallStats;
+  routePerformance: RoutePerformance[];
+  dailyTrend: DailyTrend[];
 }
 
 function getWeekStart(offset: number): string {
@@ -68,9 +85,7 @@ function getWeekEnd(offset: number): string {
 export default function PerformancePage() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [routes, setRoutes] = useState<RouteItem[]>([]);
-  const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [totalSales, setTotalSales] = useState(0);
+  const [data, setData] = useState<PerformanceData | null>(null);
 
   const startDate = getWeekStart(weekOffset);
   const endDate = getWeekEnd(weekOffset);
@@ -80,21 +95,14 @@ export default function PerformancePage() {
     async function fetchData() {
       setLoading(true);
       try {
-        const [routesRes, salesRes, assignRes] = await Promise.all([
-          fetch("/api/routes"),
-          fetch(`/api/reports/sales-summary?startDate=${startDate}&endDate=${endDate}`),
-          fetch(`/api/assignments?startDate=${startDate}&endDate=${endDate}`),
-        ]);
-
-        const routesData = await routesRes.json();
-        const salesData = await salesRes.json();
-        const assignData = await assignRes.json();
-
-        setRoutes(routesData.success ? routesData.data : []);
-        setTotalSales(salesData.success ? salesData.data.totalSales : 0);
-        setAssignments(assignData.success ? assignData.data : []);
+        const res = await fetch(
+          `/api/reports/performance?startDate=${startDate}&endDate=${endDate}`
+        );
+        const json = await res.json();
+        if (json.success) setData(json.data);
+        else setData(null);
       } catch {
-        // silent
+        setData(null);
       } finally {
         setLoading(false);
       }
@@ -102,56 +110,19 @@ export default function PerformancePage() {
     fetchData();
   }, [startDate, endDate]);
 
-  const routePerformance = routes.map((route) => {
-    const routeAssignments = assignments.filter((a) => a.route.id === route.id);
-    const sales = routeAssignments.reduce(
-      (sum, a) => sum + (a.salesRepShift?.salesActual ?? a.orders.reduce((s, o) => s + o.totalAmount, 0)),
-      0
-    );
-    const target = route.targetDaily * 7;
-    const customers = routeAssignments.reduce(
-      (sum, a) => sum + (a.salesRepShift?.customerCountActual ?? 0),
-      0
-    );
-    const complaints = routeAssignments.reduce(
-      (sum, a) => sum + (a.salesRepShift?.complaints ?? 0),
-      0
-    );
-    const salesRep = routeAssignments[0]?.salesRep?.name ?? "—";
-    const attainment = target > 0 ? Math.round((sales / target) * 100) : 0;
-
-    return { route: route.name, salesRep, target, actual: sales, attainment, customers, complaints };
-  });
-
-  const dailyTrend = (() => {
-    const days: Record<string, Record<string, number>> = {};
-    const start = new Date(weekRange.start);
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      const key = d.toLocaleDateString("en-KE", { weekday: "short", day: "numeric" });
-      days[key] = {};
-      routes.forEach((r) => (days[key][r.name] = 0));
-    }
-    assignments.forEach((a) => {
-      const d = new Date(a.date);
-      const key = d.toLocaleDateString("en-KE", { weekday: "short", day: "numeric" });
-      if (days[key] && a.route?.name) {
-        days[key][a.route.name] += a.salesRepShift?.salesActual ?? a.orders.reduce((s, o) => s + o.totalAmount, 0);
-      }
-    });
-    return Object.entries(days).map(([day, routeVals]) => ({ day, ...routeVals }));
-  })();
-
-  const routeNames = routes.map((r) => r.name);
-  const chartColors = ["#0d9488", "#b45309", "#dc2626", "#7c3aed", "#2563eb", "#ca8a04", "#059669", "#be185d"];
-
-  const computedTotalSales = totalSales || routePerformance.reduce((s, r) => s + r.actual, 0);
-  const avgAttainment =
-    routePerformance.length > 0
-      ? Math.round(routePerformance.reduce((s, r) => s + r.attainment, 0) / routePerformance.length)
-      : 0;
-  const totalComplaints = routePerformance.reduce((s, r) => s + r.complaints, 0);
+  const overall = data?.overall ?? {
+    totalSales: 0,
+    totalTarget: 0,
+    avgAttainment: 0,
+    totalComplaints: 0,
+    totalMissingItems: 0,
+    totalCustomers: 0,
+    metCount: 0,
+    notMetCount: 0,
+    totalAssignments: 0,
+  };
+  const routePerformance = data?.routePerformance ?? [];
+  const dailyTrend = data?.dailyTrend ?? [];
   const activeRoutes = routePerformance.filter((r) => r.actual > 0).length;
 
   if (loading) {
@@ -191,15 +162,12 @@ export default function PerformancePage() {
               title="Performance Analytics"
               filename={`nampark-performance-${weekRange.label.replace(/\s/g, "-")}`}
               reportType="performance"
-              params={{
-                startDate: getWeekStart(weekOffset),
-                endDate: getWeekEnd(weekOffset),
-              }}
+              params={{ startDate, endDate }}
               onCSVExport={() => {
                 const rows = [
                   toCSVRow(["Route", "Rep", "Target", "Actual", "Attainment%", "Customers", "Complaints"]),
                   ...routePerformance.map((r) =>
-                    toCSVRow([r.route, r.salesRep, r.target, r.actual, r.attainment.toFixed(1), r.customers, r.complaints])
+                    toCSVRow([r.routeName, r.salesRepName, r.target, r.actual, r.attainment, r.customerCount, r.complaints])
                   ),
                 ];
                 return rows.join("\n");
@@ -216,7 +184,7 @@ export default function PerformancePage() {
               <TrendingUp className="w-5 h-5 text-teal-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-800">{formatCurrency(computedTotalSales)}</p>
+              <p className="text-2xl font-bold text-slate-800">{formatCurrency(overall.totalSales)}</p>
               <p className="text-xs text-slate-500">Total Sales</p>
             </div>
           </div>
@@ -227,7 +195,7 @@ export default function PerformancePage() {
               <Target className="w-5 h-5 text-green-600" />
             </div>
             <div>
-              <p className={`text-2xl font-bold ${getPerformanceColor(avgAttainment)}`}>{avgAttainment}%</p>
+              <p className={`text-2xl font-bold ${getPerformanceColor(overall.avgAttainment)}`}>{overall.avgAttainment}%</p>
               <p className="text-xs text-slate-500">Avg Attainment</p>
             </div>
           </div>
@@ -238,7 +206,7 @@ export default function PerformancePage() {
               <AlertTriangle className="w-5 h-5 text-red-600" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-slate-800">{totalComplaints}</p>
+              <p className="text-2xl font-bold text-slate-800">{overall.totalComplaints}</p>
               <p className="text-xs text-slate-500">Total Complaints</p>
             </div>
           </div>
@@ -259,32 +227,44 @@ export default function PerformancePage() {
       <div className="card p-6">
         <div className="flex items-center gap-2 mb-4">
           <BarChart3 className="w-5 h-5 text-teal-600" />
-          <h2 className="font-serif font-bold text-slate-800">Daily Sales Trend</h2>
+          <h2 className="font-serif font-bold text-slate-800">Daily Sales vs Target</h2>
         </div>
-        <div className="h-80">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={dailyTrend}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="day" tick={{ fontSize: 12 }} stroke="#94a3b8" />
-              <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-              <Tooltip
-                formatter={(value) => formatCurrency(Number(value))}
-                contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "12px" }}
-              />
-              {routeNames.map((name, i) => (
-                <Area
-                  key={name}
-                  type="monotone"
-                  dataKey={name}
-                  stackId="1"
-                  stroke={chartColors[i % chartColors.length]}
-                  fill={chartColors[i % chartColors.length]}
-                  fillOpacity={0.3}
+        {dailyTrend.every((d) => d.sales === 0 && d.target === 0) ? (
+          <p className="text-center text-slate-400 text-sm py-8">No trend data for this period</p>
+        ) : (
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={dailyTrend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="day" tick={{ fontSize: 12 }} stroke="#94a3b8" />
+                <YAxis tick={{ fontSize: 12 }} stroke="#94a3b8" tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                <Tooltip
+                  formatter={(value) => formatCurrency(Number(value))}
+                  contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "12px" }}
                 />
-              ))}
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+                <Area
+                  type="monotone"
+                  dataKey="target"
+                  stroke="#b45309"
+                  fill="#b45309"
+                  fillOpacity={0.1}
+                  strokeWidth={2}
+                  name="Target"
+                  strokeDasharray="6 3"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="sales"
+                  stroke="#0d9488"
+                  fill="#0d9488"
+                  fillOpacity={0.2}
+                  strokeWidth={2}
+                  name="Sales"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       <div className="card">
@@ -311,14 +291,14 @@ export default function PerformancePage() {
               {routePerformance.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="p-8 text-center text-slate-400 text-sm">
-                    No route data for this week.
+                    No route data for this period.
                   </td>
                 </tr>
               ) : (
                 routePerformance.map((row) => (
-                  <tr key={row.route} className="hover:bg-slate-50/50">
-                    <td className="table-cell font-medium">{row.route}</td>
-                    <td className="table-cell">{row.salesRep}</td>
+                  <tr key={row.routeId} className="hover:bg-slate-50/50">
+                    <td className="table-cell font-medium">{row.routeName}</td>
+                    <td className="table-cell">{row.salesRepName}</td>
                     <td className="table-cell text-right">{formatCurrency(row.target)}</td>
                     <td className="table-cell text-right font-medium">{formatCurrency(row.actual)}</td>
                     <td className="table-cell text-right">
@@ -326,7 +306,7 @@ export default function PerformancePage() {
                         {row.attainment}%
                       </span>
                     </td>
-                    <td className="table-cell text-right">{row.customers}</td>
+                    <td className="table-cell text-right">{row.customerCount}</td>
                     <td className="table-cell text-right">
                       {row.complaints > 0 ? (
                         <span className="badge-danger">{row.complaints}</span>
