@@ -4,20 +4,29 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const skus = await prisma.skuCatalog.findMany({
-    where: { isActive: true },
-    orderBy: { name: "asc" },
-    select: {
-      id: true,
-      name: true,
-      category: true,
-      unitPrice: true,
-      unitType: true,
-      packSize: true,
-    },
-  });
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
-  return NextResponse.json(skus);
+    const skus = await prisma.skuCatalog.findMany({
+      where: { isActive: true },
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        category: true,
+        unitPrice: true,
+        unitType: true,
+        packSize: true,
+      },
+    });
+
+    return NextResponse.json(skus);
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || "Failed" }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {

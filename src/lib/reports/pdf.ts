@@ -1,313 +1,958 @@
 import jsPDF from "jspdf";
 import "jspdf-autotable";
-
-interface PDFHeader {
-  title: string;
-  subtitle?: string;
-  route?: string;
-  repOrDriver?: string;
-  date?: string;
-  dateRange?: string;
-}
-
-interface PDFColumn {
-  header: string;
-  key: string;
-  width?: number;
-  align?: "left" | "center" | "right";
-}
-
-interface PDFSection {
-  title?: string;
-  columns: PDFColumn[];
-  rows: (string | number)[][];
-}
+import { ComputedReport, computeReport, computeWeeklyStats } from "./analytics";
 
 const BRAND = {
-  teal: [0, 128, 128] as [number, number, number],
-  tealDark: [0, 100, 100] as [number, number, number],
-  slate: [51, 65, 85] as [number, number, number],
-  lightGrey: [248, 250, 252] as [number, number, number],
+  darkGreen: [14, 21, 18] as [number, number, number],
+  green: [20, 28, 24] as [number, number, number],
+  greenLight: [38, 49, 43] as [number, number, number],
+  gold: [201, 162, 39] as [number, number, number],
+  goldDim: [142, 116, 32] as [number, number, number],
+  text: [237, 232, 221] as [number, number, number],
+  textDim: [138, 150, 144] as [number, number, number],
+  textFaint: [92, 102, 95] as [number, number, number],
   white: [255, 255, 255] as [number, number, number],
-  border: [226, 232, 240] as [number, number, number],
+  panel: [24, 32, 25] as [number, number, number],
+  panelLight: [28, 38, 31] as [number, number, number],
+  border: [38, 49, 43] as [number, number, number],
+  red: [220, 38, 38] as [number, number, number],
+  greenAccent: [34, 197, 94] as [number, number, number],
+  pageBg: [14, 21, 18] as [number, number, number],
 };
 
-function drawHeader(doc: jsPDF, header: PDFHeader, pageWidth: number) {
-  // Teal banner
-  doc.setFillColor(...BRAND.teal);
-  doc.rect(0, 0, pageWidth, 32, "F");
+function drawBrandHeader(doc: jsPDF, title: string, subtitle: string, dateStr: string, pageWidth: number) {
+  doc.setFillColor(...BRAND.darkGreen);
+  doc.rect(0, 0, pageWidth, 40, "F");
 
-  // Company name
-  doc.setTextColor(...BRAND.white);
-  doc.setFontSize(18);
-  doc.setFont("helvetica", "bold");
-  doc.text("Nampark Route Management", 14, 14);
+  doc.setFillColor(...BRAND.gold);
+  doc.rect(0, 40, pageWidth, 1.5, "F");
 
-  // Subtitle
-  doc.setFontSize(9);
+  doc.setTextColor(...BRAND.gold);
+  doc.setFontSize(8);
   doc.setFont("helvetica", "normal");
-  doc.text("AnswerPort Ltd / Kanini Haraka Enterprises", 14, 21);
+  doc.text("N", 14, 14);
 
-  // Date on right
-  doc.setFontSize(9);
-  const dateStr = header.dateRange || header.date || new Date().toLocaleDateString("en-KE");
-  doc.text(dateStr, pageWidth - 14, 14, { align: "right" });
-  doc.text(`Generated: ${new Date().toLocaleDateString("en-KE")}`, pageWidth - 14, 21, { align: "right" });
-
-  // Report title
-  doc.setTextColor(...BRAND.slate);
-  doc.setFontSize(14);
+  doc.setTextColor(...BRAND.text);
+  doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text(header.title, 14, 44);
+  doc.text("NAMPARK", 22, 14);
 
-  let yPos = 52;
+  doc.setTextColor(...BRAND.textDim);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.text("ROUTE MANAGEMENT SYSTEM", 22, 20);
 
-  // Subtitle info line
-  if (header.route || header.repOrDriver) {
-    doc.setFontSize(10);
+  doc.setTextColor(...BRAND.textFaint);
+  doc.setFontSize(7);
+  doc.text("AnswerPort Ltd / Kanini Haraka Enterprises", 14, 34);
+
+  doc.setTextColor(...BRAND.gold);
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "bold");
+  doc.text(dateStr.toUpperCase(), pageWidth - 14, 14, { align: "right" });
+
+  doc.setTextColor(...BRAND.textFaint);
+  doc.setFontSize(7);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Generated: ${new Date().toLocaleDateString("en-KE")}`, pageWidth - 14, 20, { align: "right" });
+
+  doc.setTextColor(...BRAND.text);
+  doc.setFontSize(13);
+  doc.setFont("helvetica", "bold");
+  doc.text(title, 14, 52);
+
+  if (subtitle) {
+    doc.setTextColor(...BRAND.textDim);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    doc.setTextColor(100, 116, 139);
-    const parts: string[] = [];
-    if (header.route) parts.push(`Route: ${header.route}`);
-    if (header.repOrDriver) parts.push(header.repOrDriver);
-    if (header.subtitle) parts.push(header.subtitle);
-    doc.text(parts.join("  |  "), 14, yPos);
-    yPos += 8;
+    doc.text(subtitle, 14, 59);
   }
 
-  // Separator line
   doc.setDrawColor(...BRAND.border);
-  doc.setLineWidth(0.5);
-  doc.line(14, yPos, pageWidth - 14, yPos);
+  doc.setLineWidth(0.3);
+  doc.line(14, 63, pageWidth - 14, 63);
 
-  return yPos + 6;
+  return 68;
+}
+
+function drawPageBg(doc: jsPDF, pageWidth: number, pageHeight: number) {
+  doc.setFillColor(...BRAND.pageBg);
+  doc.rect(0, 0, pageWidth, pageHeight, "F");
 }
 
 function drawFooter(doc: jsPDF, pageCount: number, pageWidth: number, pageHeight: number) {
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
-    doc.setFillColor(...BRAND.lightGrey);
-    doc.rect(0, pageHeight - 16, pageWidth, 16, "F");
-    doc.setDrawColor(...BRAND.border);
-    doc.line(0, pageHeight - 16, pageWidth, pageHeight - 16);
+    doc.setFillColor(...BRAND.darkGreen);
+    doc.rect(0, pageHeight - 14, pageWidth, 14, "F");
+    doc.setFillColor(...BRAND.gold);
+    doc.rect(0, pageHeight - 14, pageWidth, 0.5, "F");
+
+    doc.setTextColor(...BRAND.gold);
     doc.setFontSize(7);
-    doc.setTextColor(148, 163, 184);
-    doc.text("Nampark Route Management", 14, pageHeight - 8);
-    doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, pageHeight - 8, { align: "right" });
+    doc.setFont("helvetica", "bold");
+    doc.text("NAMPARK ROUTE MANAGEMENT", 14, pageHeight - 6);
+
+    doc.setTextColor(...BRAND.textFaint);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Page ${i} of ${pageCount}`, pageWidth - 14, pageHeight - 6, { align: "right" });
   }
 }
 
-export function generateReportPDF(
-  header: PDFHeader,
-  sections: PDFSection[],
-  filename?: string
-): jsPDF {
-  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+function checkPageBreak(doc: jsPDF, currentY: number, neededSpace: number, pageWidth: number, pageHeight: number): number {
+  if (currentY + neededSpace > pageHeight - 20) {
+    doc.addPage();
+    drawPageBg(doc, pageWidth, pageHeight);
+    return 20;
+  }
+  return currentY;
+}
+
+export function generateDailyRouteReport(report: ComputedReport): jsPDF {
+  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 14;
-  const tableWidth = pageWidth - margin * 2;
 
-  let yPos = drawHeader(doc, header, pageWidth);
+  drawPageBg(doc, pageWidth, pageHeight);
 
-  for (const section of sections) {
-    // Section title
-    if (section.title) {
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...BRAND.slate);
-      doc.text(section.title, margin, yPos);
-      yPos += 6;
-    }
+  const dateStr = new Date(report.date).toLocaleDateString("en-KE", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
 
-    // Table via autotable
-    const head = [section.columns.map((c) => c.header)];
-    const body = section.rows;
+  const subtitle = `${report.route.name} Route  |  Rep: ${report.salesRep.name}  |  Driver: ${report.driver.name}  |  Vehicle: ${report.vehicle.registration}`;
+
+  let yPos = drawBrandHeader(doc, "DAILY ROUTE REPORT", subtitle, dateStr, pageWidth);
+
+  // KPI Status Badge
+  const statusColor = report.kpiStatus === "MET" ? BRAND.greenAccent : BRAND.red;
+  doc.setFillColor(...statusColor);
+  doc.roundedRect(14, yPos, 30, 8, 1, 1, "F");
+  doc.setTextColor(...BRAND.white);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "bold");
+  doc.text(report.kpiStatus, 29, yPos + 5.5, { align: "center" });
+
+  doc.setTextColor(...BRAND.textDim);
+  doc.setFontSize(8);
+  doc.setFont("helvetica", "normal");
+  doc.text(`Attainment: ${report.attainment}%`, 50, yPos + 5.5);
+
+  yPos += 14;
+
+  // KPI Table
+  doc.setTextColor(...BRAND.gold);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("KEY PERFORMANCE INDICATORS", 14, yPos);
+  yPos += 6;
+
+  const kpiHead = [["KPI", "Target", "Actual", "Status"]];
+  const kpiBody = report.kpis.map((kpi) => [
+    kpi.metric,
+    String(kpi.target),
+    String(kpi.actual),
+    kpi.status === "MET" ? "MET" : "NOT MET",
+  ]);
+
+  doc.autoTable({
+    startY: yPos,
+    margin: { left: 14, right: 14 },
+    head: kpiHead,
+    body: kpiBody,
+    theme: "plain",
+    headStyles: {
+      fillColor: BRAND.green,
+      textColor: BRAND.gold,
+      fontStyle: "bold",
+      fontSize: 7,
+      halign: "left",
+      cellPadding: 3,
+    },
+    bodyStyles: {
+      fontSize: 7,
+      textColor: BRAND.text,
+      cellPadding: 3,
+      lineColor: BRAND.border,
+      lineWidth: 0.2,
+    },
+    alternateRowStyles: {
+      fillColor: BRAND.panel,
+    },
+    columnStyles: {
+      0: { cellWidth: 50, fontStyle: "bold" },
+      1: { cellWidth: 50 },
+      2: { cellWidth: 50 },
+      3: { cellWidth: 30, halign: "center" },
+    },
+    didParseCell: function (data: any) {
+      if (data.section === "body" && data.column.index === 3) {
+        const val = String(data.cell.raw);
+        if (val === "MET") {
+          data.cell.styles.textColor = BRAND.greenAccent;
+          data.cell.styles.fontStyle = "bold";
+        } else {
+          data.cell.styles.textColor = BRAND.red;
+          data.cell.styles.fontStyle = "bold";
+        }
+      }
+    },
+  });
+
+  yPos = (doc.lastAutoTable?.finalY || yPos) + 8;
+
+  // Shift Timings
+  if (report.shiftTimings.length > 0) {
+    yPos = checkPageBreak(doc, yPos, 30, pageWidth, pageHeight);
+
+    doc.setTextColor(...BRAND.gold);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("SHIFT TIMINGS", 14, yPos);
+    yPos += 6;
+
+    const timingHead = [["Timing", "Status"]];
+    const timingBody = report.shiftTimings.map((t) => [
+      `${t.label}: ${t.actual ? new Date(t.actual).toLocaleTimeString("en-KE", { hour: "2-digit", minute: "2-digit", hour12: true }) : "—"}`,
+      t.status,
+    ]);
 
     doc.autoTable({
       startY: yPos,
-      margin: { left: margin, right: margin },
-      head,
-      body,
-      theme: "grid",
+      margin: { left: 14, right: 14 },
+      head: timingHead,
+      body: timingBody,
+      theme: "plain",
       headStyles: {
-        fillColor: BRAND.teal,
-        textColor: BRAND.white,
+        fillColor: BRAND.green,
+        textColor: BRAND.gold,
         fontStyle: "bold",
-        fontSize: 8,
-        halign: "center",
+        fontSize: 7,
+        cellPadding: 3,
       },
       bodyStyles: {
-        fontSize: 8,
-        textColor: BRAND.slate,
+        fontSize: 7,
+        textColor: BRAND.text,
+        cellPadding: 3,
         lineColor: BRAND.border,
         lineWidth: 0.2,
       },
-      alternateRowStyles: {
-        fillColor: BRAND.lightGrey,
+      alternateRowStyles: { fillColor: BRAND.panel },
+      columnStyles: {
+        0: { cellWidth: 120 },
+        1: { cellWidth: 50, halign: "center" },
       },
-      columnStyles: Object.fromEntries(
-        section.columns.map((c, i) => [
-          i,
-          {
-            halign: c.align || "left",
-            cellWidth: c.width || "auto",
-          },
-        ])
-      ),
+      didParseCell: function (data: any) {
+        if (data.section === "body" && data.column.index === 1) {
+          const val = String(data.cell.raw);
+          if (val === "On time") {
+            data.cell.styles.textColor = BRAND.greenAccent;
+          } else if (val === "Early" || val === "Late") {
+            data.cell.styles.textColor = BRAND.gold;
+          }
+        }
+      },
     });
 
-    const table = doc.lastAutoTable;
-    yPos = (table?.finalY || yPos) + 8;
+    yPos = (doc.lastAutoTable?.finalY || yPos) + 8;
   }
 
-  // Footer on all pages
+  // Orders
+  if (report.orders.length > 0) {
+    yPos = checkPageBreak(doc, yPos, 40, pageWidth, pageHeight);
+
+    doc.setTextColor(...BRAND.gold);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("ORDERS", 14, yPos);
+    yPos += 6;
+
+    const orderRows: (string | number)[][] = [];
+    report.orders.forEach((order) => {
+      order.lines.forEach((line) => {
+        orderRows.push([
+          order.customerName,
+          line.sku,
+          line.quantity,
+          `KES ${line.unitPrice.toLocaleString()}`,
+          `KES ${line.amount.toLocaleString()}`,
+        ]);
+      });
+    });
+
+    if (orderRows.length > 0) {
+      doc.autoTable({
+        startY: yPos,
+        margin: { left: 14, right: 14 },
+        head: [["Customer", "SKU", "Qty", "Unit Price", "Amount"]],
+        body: orderRows,
+        theme: "plain",
+        headStyles: {
+          fillColor: BRAND.green,
+          textColor: BRAND.gold,
+          fontStyle: "bold",
+          fontSize: 7,
+          cellPadding: 3,
+        },
+        bodyStyles: {
+          fontSize: 7,
+          textColor: BRAND.text,
+          cellPadding: 3,
+          lineColor: BRAND.border,
+          lineWidth: 0.2,
+        },
+        alternateRowStyles: { fillColor: BRAND.panel },
+        columnStyles: {
+          0: { cellWidth: 50 },
+          1: { cellWidth: 50 },
+          2: { cellWidth: 20, halign: "center" },
+          3: { cellWidth: 35, halign: "right" },
+          4: { cellWidth: 35, halign: "right" },
+        },
+      });
+      yPos = (doc.lastAutoTable?.finalY || yPos) + 8;
+    }
+  }
+
+  // Missing Items
+  if (report.missingItems.length > 0) {
+    yPos = checkPageBreak(doc, yPos, 30, pageWidth, pageHeight);
+
+    doc.setTextColor(...BRAND.gold);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("MISSING ITEMS", 14, yPos);
+    yPos += 6;
+
+    const missingHead = [["Item", "Qty", "By N Customers", "Notes"]];
+    const missingBody = report.missingItems.map((m) => [
+      m.sku,
+      m.cartonsAffected,
+      m.customerCountAffected,
+      m.notes || "—",
+    ]);
+
+    doc.autoTable({
+      startY: yPos,
+      margin: { left: 14, right: 14 },
+      head: missingHead,
+      body: missingBody,
+      theme: "plain",
+      headStyles: {
+        fillColor: BRAND.green,
+        textColor: BRAND.gold,
+        fontStyle: "bold",
+        fontSize: 7,
+        cellPadding: 3,
+      },
+      bodyStyles: {
+        fontSize: 7,
+        textColor: BRAND.text,
+        cellPadding: 3,
+        lineColor: BRAND.border,
+        lineWidth: 0.2,
+      },
+      alternateRowStyles: { fillColor: BRAND.panel },
+      columnStyles: {
+        0: { cellWidth: 60 },
+        1: { cellWidth: 25, halign: "center" },
+        2: { cellWidth: 35, halign: "center" },
+        3: { cellWidth: 70 },
+      },
+    });
+    yPos = (doc.lastAutoTable?.finalY || yPos) + 8;
+  }
+
+  // Comments
+  if (report.comments) {
+    yPos = checkPageBreak(doc, yPos, 25, pageWidth, pageHeight);
+
+    doc.setTextColor(...BRAND.gold);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("COMMENTS", 14, yPos);
+    yPos += 6;
+
+    doc.setFillColor(...BRAND.panel);
+    doc.roundedRect(14, yPos, pageWidth - 28, 12, 1, 1, "F");
+    doc.setDrawColor(...BRAND.border);
+    doc.roundedRect(14, yPos, pageWidth - 28, 12, 1, 1, "S");
+
+    doc.setTextColor(...BRAND.text);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    const lines = doc.splitTextToSize(report.comments, pageWidth - 36);
+    doc.text(lines.slice(0, 3), 18, yPos + 5);
+    yPos += 16;
+  }
+
+  // Closing Banner
+  yPos = checkPageBreak(doc, yPos, 20, pageWidth, pageHeight);
+  doc.setFillColor(...BRAND.darkGreen);
+  doc.roundedRect(14, yPos, pageWidth - 28, 14, 1, 1, "F");
+  doc.setFillColor(...BRAND.gold);
+  doc.rect(14, yPos, pageWidth - 28, 0.5, "F");
+
+  const bannerMsg = report.kpiStatus === "MET"
+    ? "GREAT WORK TODAY! KEEP IT UP!"
+    : "KEEP PUSHING! CONSISTENCY BREEDS SUCCESS!";
+
+  doc.setTextColor(...BRAND.gold);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text(bannerMsg, pageWidth / 2, yPos + 8.5, { align: "center" });
+
   const pageCount = doc.getNumberOfPages();
   drawFooter(doc, pageCount, pageWidth, pageHeight);
-
-  if (filename) {
-    doc.save(`${filename}.pdf`);
-  }
 
   return doc;
 }
 
-export function generateDailyReportPDF(
-  date: string,
-  routeReports: any[]
+export function generateDailyOverviewPDF(date: string, reports: ComputedReport[]): jsPDF {
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  drawPageBg(doc, pageWidth, pageHeight);
+
+  const dateStr = new Date(date).toLocaleDateString("en-KE", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+
+  let yPos = drawBrandHeader(doc, "DAILY OPERATIONS OVERVIEW", `${reports.length} routes active`, dateStr, pageWidth);
+
+  // Summary stats
+  const totalSales = reports.reduce((s, r) => s + r.summary.salesActual, 0);
+  const totalTarget = reports.reduce((s, r) => s + r.summary.salesTarget, 0);
+  const metCount = reports.filter((r) => r.kpiStatus === "MET").length;
+  const totalMissing = reports.reduce((s, r) => s + r.summary.missingItemsTotal, 0);
+
+  const stats = [
+    { label: "Total Sales", value: `KES ${totalSales.toLocaleString()}` },
+    { label: "Target", value: `KES ${totalTarget.toLocaleString()}` },
+    { label: "KPIs Met", value: `${metCount}/${reports.length}` },
+    { label: "Missing Items", value: String(totalMissing) },
+  ];
+
+  const statWidth = (pageWidth - 28) / 4;
+  stats.forEach((stat, i) => {
+    const x = 14 + i * statWidth;
+    doc.setFillColor(...BRAND.panel);
+    doc.roundedRect(x, yPos, statWidth - 4, 14, 1, 1, "F");
+    doc.setDrawColor(...BRAND.border);
+    doc.roundedRect(x, yPos, statWidth - 4, 14, 1, 1, "S");
+
+    doc.setTextColor(...BRAND.gold);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.text(stat.label.toUpperCase(), x + 4, yPos + 5);
+
+    doc.setTextColor(...BRAND.text);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text(stat.value, x + 4, yPos + 11);
+  });
+
+  yPos += 20;
+
+  // Route summary table
+  doc.setTextColor(...BRAND.gold);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("ROUTE PERFORMANCE", 14, yPos);
+  yPos += 6;
+
+  const routeHead = [["Route", "Rep", "Driver", "Sales", "Target", "Attainment", "KPI", "Missing"]];
+  const routeBody = reports.map((r) => [
+    r.route.name,
+    r.salesRep.name,
+    r.driver.name,
+    `KES ${r.summary.salesActual.toLocaleString()}`,
+    `KES ${r.summary.salesTarget.toLocaleString()}`,
+    `${r.attainment}%`,
+    r.kpiStatus,
+    String(r.summary.missingItemsTotal),
+  ]);
+
+  doc.autoTable({
+    startY: yPos,
+    margin: { left: 14, right: 14 },
+    head: routeHead,
+    body: routeBody,
+    theme: "plain",
+    headStyles: {
+      fillColor: BRAND.green,
+      textColor: BRAND.gold,
+      fontStyle: "bold",
+      fontSize: 7,
+      cellPadding: 3,
+    },
+    bodyStyles: {
+      fontSize: 7,
+      textColor: BRAND.text,
+      cellPadding: 3,
+      lineColor: BRAND.border,
+      lineWidth: 0.2,
+    },
+    alternateRowStyles: { fillColor: BRAND.panel },
+    columnStyles: {
+      0: { cellWidth: 30, fontStyle: "bold" },
+      1: { cellWidth: 35 },
+      2: { cellWidth: 35 },
+      3: { cellWidth: 35, halign: "right" },
+      4: { cellWidth: 35, halign: "right" },
+      5: { cellWidth: 25, halign: "center" },
+      6: { cellWidth: 25, halign: "center" },
+      7: { cellWidth: 20, halign: "center" },
+    },
+    didParseCell: function (data: any) {
+      if (data.section === "body" && data.column.index === 6) {
+        const val = String(data.cell.raw);
+        if (val === "MET") {
+          data.cell.styles.textColor = BRAND.greenAccent;
+          data.cell.styles.fontStyle = "bold";
+        } else {
+          data.cell.styles.textColor = BRAND.red;
+          data.cell.styles.fontStyle = "bold";
+        }
+      }
+    },
+  });
+
+  const pageCount = doc.getNumberOfPages();
+  drawFooter(doc, pageCount, pageWidth, pageHeight);
+
+  return doc;
+}
+
+export function generateWeeklySummaryPDF(date: string, reports: ComputedReport[]): jsPDF {
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  drawPageBg(doc, pageWidth, pageHeight);
+
+  const stats = computeWeeklyStats(reports);
+  const weekEnd = new Date(date);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+
+  const dateRange = `${new Date(date).toLocaleDateString("en-KE", { day: "numeric", month: "short" })} - ${weekEnd.toLocaleDateString("en-KE", { day: "numeric", month: "short", year: "numeric" })}`;
+
+  let yPos = drawBrandHeader(doc, "WEEKLY EXECUTIVE SUMMARY", `${reports.length} daily reports analyzed`, dateRange, pageWidth);
+
+  // Summary stats
+  const summaryStats = [
+    { label: "Total Sales", value: `KES ${stats.totalSales.toLocaleString()}` },
+    { label: "Avg Attainment", value: `${stats.avgAttainment}%` },
+    { label: "KPIs Met", value: `${stats.metCount}/${stats.metCount + stats.notMetCount}` },
+    { label: "Total Complaints", value: String(stats.totalComplaints) },
+    { label: "Missing Items", value: String(stats.totalMissingItems) },
+  ];
+
+  const statWidth = (pageWidth - 28) / 5;
+  summaryStats.forEach((stat, i) => {
+    const x = 14 + i * statWidth;
+    doc.setFillColor(...BRAND.panel);
+    doc.roundedRect(x, yPos, statWidth - 4, 14, 1, 1, "F");
+    doc.setDrawColor(...BRAND.border);
+    doc.roundedRect(x, yPos, statWidth - 4, 14, 1, 1, "S");
+
+    doc.setTextColor(...BRAND.gold);
+    doc.setFontSize(7);
+    doc.setFont("helvetica", "normal");
+    doc.text(stat.label.toUpperCase(), x + 4, yPos + 5);
+
+    doc.setTextColor(...BRAND.text);
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text(stat.value, x + 4, yPos + 11);
+  });
+
+  yPos += 20;
+
+  // Route breakdown
+  doc.setTextColor(...BRAND.gold);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("ROUTE PERFORMANCE BREAKDOWN", 14, yPos);
+  yPos += 6;
+
+  const routeHead = [["Route", "Rep", "Driver", "Sales", "Target", "Attainment", "KPI", "Complaints", "Missing"]];
+  const routeBody = reports.map((r) => [
+    r.route.name,
+    r.salesRep.name,
+    r.driver.name,
+    `KES ${r.summary.salesActual.toLocaleString()}`,
+    `KES ${r.summary.salesTarget.toLocaleString()}`,
+    `${r.attainment}%`,
+    r.kpiStatus,
+    String(r.kpis.find((k) => k.metric === "Complaints")?.actual || 0),
+    String(r.summary.missingItemsTotal),
+  ]);
+
+  doc.autoTable({
+    startY: yPos,
+    margin: { left: 14, right: 14 },
+    head: routeHead,
+    body: routeBody,
+    theme: "plain",
+    headStyles: {
+      fillColor: BRAND.green,
+      textColor: BRAND.gold,
+      fontStyle: "bold",
+      fontSize: 7,
+      cellPadding: 3,
+    },
+    bodyStyles: {
+      fontSize: 7,
+      textColor: BRAND.text,
+      cellPadding: 3,
+      lineColor: BRAND.border,
+      lineWidth: 0.2,
+    },
+    alternateRowStyles: { fillColor: BRAND.panel },
+    columnStyles: {
+      0: { cellWidth: 25, fontStyle: "bold" },
+      1: { cellWidth: 30 },
+      2: { cellWidth: 30 },
+      3: { cellWidth: 32, halign: "right" },
+      4: { cellWidth: 32, halign: "right" },
+      5: { cellWidth: 22, halign: "center" },
+      6: { cellWidth: 22, halign: "center" },
+      7: { cellWidth: 22, halign: "center" },
+      8: { cellWidth: 18, halign: "center" },
+    },
+    didParseCell: function (data: any) {
+      if (data.section === "body" && data.column.index === 6) {
+        const val = String(data.cell.raw);
+        if (val === "MET") {
+          data.cell.styles.textColor = BRAND.greenAccent;
+          data.cell.styles.fontStyle = "bold";
+        } else {
+          data.cell.styles.textColor = BRAND.red;
+          data.cell.styles.fontStyle = "bold";
+        }
+      }
+    },
+  });
+
+  yPos = (doc.lastAutoTable?.finalY || yPos) + 10;
+
+  // Daily trend
+  const uniqueDates = [...new Set(reports.map((r) => r.date))].sort();
+  if (uniqueDates.length > 1) {
+    yPos = checkPageBreak(doc, yPos, 40, pageWidth, pageHeight);
+
+    doc.setTextColor(...BRAND.gold);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("DAILY TREND", 14, yPos);
+    yPos += 6;
+
+    const trendHead = [["Date", "Total Sales", "Target", "Attainment", "Routes Active"]];
+    const trendBody = uniqueDates.map((d) => {
+      const dayReports = reports.filter((r) => r.date === d);
+      const daySales = dayReports.reduce((s, r) => s + r.summary.salesActual, 0);
+      const dayTarget = dayReports.reduce((s, r) => s + r.summary.salesTarget, 0);
+      const dayAtt = dayTarget > 0 ? Math.round((daySales / dayTarget) * 100) : 0;
+      return [
+        new Date(d).toLocaleDateString("en-KE", { weekday: "short", day: "numeric", month: "short" }),
+        `KES ${daySales.toLocaleString()}`,
+        `KES ${dayTarget.toLocaleString()}`,
+        `${dayAtt}%`,
+        String(dayReports.length),
+      ];
+    });
+
+    doc.autoTable({
+      startY: yPos,
+      margin: { left: 14, right: 14 },
+      head: trendHead,
+      body: trendBody,
+      theme: "plain",
+      headStyles: {
+        fillColor: BRAND.green,
+        textColor: BRAND.gold,
+        fontStyle: "bold",
+        fontSize: 7,
+        cellPadding: 3,
+      },
+      bodyStyles: {
+        fontSize: 7,
+        textColor: BRAND.text,
+        cellPadding: 3,
+        lineColor: BRAND.border,
+        lineWidth: 0.2,
+      },
+      alternateRowStyles: { fillColor: BRAND.panel },
+      columnStyles: {
+        0: { cellWidth: 45 },
+        1: { cellWidth: 40, halign: "right" },
+        2: { cellWidth: 40, halign: "right" },
+        3: { cellWidth: 30, halign: "center" },
+        4: { cellWidth: 30, halign: "center" },
+      },
+    });
+  }
+
+  const pageCount = doc.getNumberOfPages();
+  drawFooter(doc, pageCount, pageWidth, pageHeight);
+
+  return doc;
+}
+
+export function generatePerformancePDF(reports: ComputedReport[]): jsPDF {
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  drawPageBg(doc, pageWidth, pageHeight);
+
+  let yPos = drawBrandHeader(doc, "PERFORMANCE ANALYTICS", "Route-level performance analysis", new Date().toLocaleDateString("en-KE"), pageWidth);
+
+  // Route performance
+  doc.setTextColor(...BRAND.gold);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("ROUTE RANKINGS", 14, yPos);
+  yPos += 6;
+
+  const sorted = [...reports].sort((a, b) => b.attainment - a.attainment);
+
+  const rankHead = [["Rank", "Route", "Rep", "Attainment", "Sales", "Target", "Status"]];
+  const rankBody = sorted.map((r, i) => [
+    String(i + 1),
+    r.route.name,
+    r.salesRep.name,
+    `${r.attainment}%`,
+    `KES ${r.summary.salesActual.toLocaleString()}`,
+    `KES ${r.summary.salesTarget.toLocaleString()}`,
+    r.kpiStatus,
+  ]);
+
+  doc.autoTable({
+    startY: yPos,
+    margin: { left: 14, right: 14 },
+    head: rankHead,
+    body: rankBody,
+    theme: "plain",
+    headStyles: {
+      fillColor: BRAND.green,
+      textColor: BRAND.gold,
+      fontStyle: "bold",
+      fontSize: 7,
+      cellPadding: 3,
+    },
+    bodyStyles: {
+      fontSize: 7,
+      textColor: BRAND.text,
+      cellPadding: 3,
+      lineColor: BRAND.border,
+      lineWidth: 0.2,
+    },
+    alternateRowStyles: { fillColor: BRAND.panel },
+    columnStyles: {
+      0: { cellWidth: 15, halign: "center", fontStyle: "bold" },
+      1: { cellWidth: 30, fontStyle: "bold" },
+      2: { cellWidth: 35 },
+      3: { cellWidth: 25, halign: "center" },
+      4: { cellWidth: 35, halign: "right" },
+      5: { cellWidth: 35, halign: "right" },
+      6: { cellWidth: 25, halign: "center" },
+    },
+    didParseCell: function (data: any) {
+      if (data.section === "body" && data.column.index === 6) {
+        const val = String(data.cell.raw);
+        if (val === "MET") {
+          data.cell.styles.textColor = BRAND.greenAccent;
+          data.cell.styles.fontStyle = "bold";
+        } else {
+          data.cell.styles.textColor = BRAND.red;
+          data.cell.styles.fontStyle = "bold";
+        }
+      }
+    },
+  });
+
+  const pageCount = doc.getNumberOfPages();
+  drawFooter(doc, pageCount, pageWidth, pageHeight);
+
+  return doc;
+}
+
+export function generateMissingItemsPDF(
+  items: { sku: string; count: number; cartons: number; customers: number; routes: string[] }[]
 ): jsPDF {
   const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
-  const margin = 14;
 
-  for (let i = 0; i < routeReports.length; i++) {
-    const report = routeReports[i];
-    if (i > 0) doc.addPage();
+  drawPageBg(doc, pageWidth, pageHeight);
 
-    let yPos = drawHeader(doc, {
-      title: `Daily Operations Report`,
-      route: report.route?.name,
-      repOrDriver: `Rep: ${report.salesRep?.name}  |  Driver: ${report.driver?.name}  |  Vehicle: ${report.vehicle?.registration}`,
-      date,
-    }, pageWidth);
+  let yPos = drawBrandHeader(doc, "MISSING ITEMS REPORT", "Items affecting sales performance", new Date().toLocaleDateString("en-KE"), pageWidth);
 
-    // KPIs
-    const summary = report.summary || {};
-    doc.autoTable({
-      startY: yPos,
-      margin: { left: margin, right: margin },
-      head: [["Metric", "Value"]],
-      body: [
-        ["Shift Open", report.shift?.shiftOpen || "—"],
-        ["Shift Close", report.shift?.shiftClose || "—"],
-        ["Customer Count", `${report.shift?.customerCountActual || 0} / ${report.shift?.customerCountTarget || 0}`],
-        ["Sales", `KES ${(summary.salesActual || 0).toLocaleString()} / ${(summary.salesTarget || 0).toLocaleString()}`],
-        ["Attainment", `${(summary.attainment || 0).toFixed(1)}%`],
-        ["Complaints", String(report.shift?.complaints || 0)],
-      ],
-      theme: "grid",
-      headStyles: { fillColor: BRAND.teal, textColor: BRAND.white, fontStyle: "bold", fontSize: 8 },
-      bodyStyles: { fontSize: 8, textColor: BRAND.slate },
-      alternateRowStyles: { fillColor: BRAND.lightGrey },
-      columnStyles: { 0: { cellWidth: 60, fontStyle: "bold" } },
-    });
+  const tableHead = [["Item", "Frequency", "Cartons", "Customers Affected", "Routes"]];
+  const tableBody = items.map((m) => [
+    m.sku,
+    String(m.count),
+    String(m.cartons),
+    String(m.customers),
+    m.routes.join(", "),
+  ]);
 
-    let yPos2 = (doc.lastAutoTable?.finalY || yPos) + 6;
+  doc.autoTable({
+    startY: yPos,
+    margin: { left: 14, right: 14 },
+    head: tableHead,
+    body: tableBody,
+    theme: "plain",
+    headStyles: {
+      fillColor: BRAND.green,
+      textColor: BRAND.gold,
+      fontStyle: "bold",
+      fontSize: 7,
+      cellPadding: 3,
+    },
+    bodyStyles: {
+      fontSize: 7,
+      textColor: BRAND.text,
+      cellPadding: 3,
+      lineColor: BRAND.border,
+      lineWidth: 0.2,
+    },
+    alternateRowStyles: { fillColor: BRAND.panel },
+    columnStyles: {
+      0: { cellWidth: 60, fontStyle: "bold" },
+      1: { cellWidth: 25, halign: "center" },
+      2: { cellWidth: 25, halign: "center" },
+      3: { cellWidth: 35, halign: "center" },
+      4: { cellWidth: 60 },
+    },
+  });
 
-    // Orders
-    if (report.orders && report.orders.length > 0) {
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...BRAND.slate);
-      doc.text("Orders", margin, yPos2);
-      yPos2 += 5;
-
-      const orderRows: (string | number)[][] = [];
-      report.orders.forEach((order: any) => {
-        (order.lines || []).forEach((line: any) => {
-          orderRows.push([
-            order.customerName || "—",
-            line.sku?.name || "—",
-            line.quantity || 0,
-            `KES ${(line.unitPrice || 0).toLocaleString()}`,
-            `KES ${(line.amount || 0).toLocaleString()}`,
-          ]);
-        });
-      });
-
-      if (orderRows.length > 0) {
-        doc.autoTable({
-          startY: yPos2,
-          margin: { left: margin, right: margin },
-          head: [["Customer", "SKU", "Qty", "Unit Price", "Amount"]],
-          body: orderRows,
-          theme: "grid",
-          headStyles: { fillColor: BRAND.tealDark, textColor: BRAND.white, fontStyle: "bold", fontSize: 7 },
-          bodyStyles: { fontSize: 7, textColor: BRAND.slate },
-          alternateRowStyles: { fillColor: BRAND.lightGrey },
-        });
-        yPos2 = (doc.lastAutoTable?.finalY || yPos2) + 6;
-      }
-    }
-
-    // Missing items
-    if (report.missingItems && report.missingItems.length > 0) {
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...BRAND.slate);
-      doc.text("Missing Items", margin, yPos2);
-      yPos2 += 5;
-
-      doc.autoTable({
-        startY: yPos2,
-        margin: { left: margin, right: margin },
-        head: [["SKU", "Customers Affected", "Cartons", "Notes"]],
-        body: report.missingItems.map((m: any) => [
-          m.sku?.name || "—",
-          m.customerCountAffected || 0,
-          m.cartonsAffected || 0,
-          m.notes || "—",
-        ]),
-        theme: "grid",
-        headStyles: { fillColor: [217, 119, 6], textColor: BRAND.white, fontStyle: "bold", fontSize: 7 },
-        bodyStyles: { fontSize: 7, textColor: BRAND.slate },
-        alternateRowStyles: { fillColor: [255, 251, 235] },
-      });
-      yPos2 = (doc.lastAutoTable?.finalY || yPos2) + 6;
-    }
-
-    // Driver shift times
-    if (report.driverShift) {
-      const ds = report.driverShift;
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...BRAND.slate);
-      doc.text("Driver Shift", margin, yPos2);
-      yPos2 += 5;
-
-      doc.autoTable({
-        startY: yPos2,
-        margin: { left: margin, right: margin },
-        head: [["Loading Start", "Loading End", "Shift Start", "Gate Pass", "Shift End", "Customers"]],
-        body: [[
-          ds.loadingStart || "—",
-          ds.loadingEnd || "—",
-          ds.shiftStart || "—",
-          ds.gatePassTime || "—",
-          ds.shiftEnd || "—",
-          ds.customerCountActual || 0,
-        ]],
-        theme: "grid",
-        headStyles: { fillColor: BRAND.teal, textColor: BRAND.white, fontStyle: "bold", fontSize: 7 },
-        bodyStyles: { fontSize: 7, textColor: BRAND.slate },
-      });
-    }
-  }
-
-  // Footers
   const pageCount = doc.getNumberOfPages();
   drawFooter(doc, pageCount, pageWidth, pageHeight);
 
   return doc;
 }
+
+export function generateReturnsPDF(
+  returnsByType: { type: string; count: number; amount: number }[],
+  detailedReturns: { date: string; driver: string; route: string; sku: string; type: string; qty: number; amount: number }[]
+): jsPDF {
+  const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  drawPageBg(doc, pageWidth, pageHeight);
+
+  let yPos = drawBrandHeader(doc, "RETURNS ANALYSIS", "Return trends and breakdown", new Date().toLocaleDateString("en-KE"), pageWidth);
+
+  // Summary by type
+  doc.setTextColor(...BRAND.gold);
+  doc.setFontSize(9);
+  doc.setFont("helvetica", "bold");
+  doc.text("RETURNS BY TYPE", 14, yPos);
+  yPos += 6;
+
+  const typeHead = [["Type", "Count", "Total Amount"]];
+  const typeBody = returnsByType.map((r) => [
+    r.type.replace(/_/g, " "),
+    String(r.count),
+    `KES ${r.amount.toLocaleString()}`,
+  ]);
+
+  doc.autoTable({
+    startY: yPos,
+    margin: { left: 14, right: 14 },
+    head: typeHead,
+    body: typeBody,
+    theme: "plain",
+    headStyles: {
+      fillColor: BRAND.green,
+      textColor: BRAND.gold,
+      fontStyle: "bold",
+      fontSize: 7,
+      cellPadding: 3,
+    },
+    bodyStyles: {
+      fontSize: 7,
+      textColor: BRAND.text,
+      cellPadding: 3,
+      lineColor: BRAND.border,
+      lineWidth: 0.2,
+    },
+    alternateRowStyles: { fillColor: BRAND.panel },
+    columnStyles: {
+      0: { cellWidth: 60, fontStyle: "bold" },
+      1: { cellWidth: 30, halign: "center" },
+      2: { cellWidth: 40, halign: "right" },
+    },
+  });
+
+  yPos = (doc.lastAutoTable?.finalY || yPos) + 10;
+
+  // Detailed returns
+  if (detailedReturns.length > 0) {
+    doc.setTextColor(...BRAND.gold);
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("DETAILED RETURNS", 14, yPos);
+    yPos += 6;
+
+    const detailHead = [["Date", "Driver", "Route", "SKU", "Type", "Qty", "Amount"]];
+    const detailBody = detailedReturns.map((r) => [
+      new Date(r.date).toLocaleDateString("en-KE", { day: "numeric", month: "short" }),
+      r.driver,
+      r.route,
+      r.sku,
+      r.type.replace(/_/g, " "),
+      String(r.qty),
+      `KES ${r.amount.toLocaleString()}`,
+    ]);
+
+    doc.autoTable({
+      startY: yPos,
+      margin: { left: 14, right: 14 },
+      head: detailHead,
+      body: detailBody,
+      theme: "plain",
+      headStyles: {
+        fillColor: BRAND.green,
+        textColor: BRAND.gold,
+        fontStyle: "bold",
+        fontSize: 7,
+        cellPadding: 3,
+      },
+      bodyStyles: {
+        fontSize: 7,
+        textColor: BRAND.text,
+        cellPadding: 3,
+        lineColor: BRAND.border,
+        lineWidth: 0.2,
+      },
+      alternateRowStyles: { fillColor: BRAND.panel },
+      columnStyles: {
+        0: { cellWidth: 28 },
+        1: { cellWidth: 30 },
+        2: { cellWidth: 28 },
+        3: { cellWidth: 40 },
+        4: { cellWidth: 30 },
+        5: { cellWidth: 15, halign: "center" },
+        6: { cellWidth: 30, halign: "right" },
+      },
+    });
+  }
+
+  const pageCount = doc.getNumberOfPages();
+  drawFooter(doc, pageCount, pageWidth, pageHeight);
+
+  return doc;
+}
+
+export { computeReport };

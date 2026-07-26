@@ -180,8 +180,10 @@ model SalesRepShift {
   salesTarget           Float     @default(0)
   salesActual           Float     @default(0)
   complaints            Int       @default(0)
+  complaintTarget       Int       @default(0)
   reportSubmissionTime  DateTime?
   comments              String?
+  kpiReasons            Json      @default("{}")
   createdAt             DateTime  @default(now())
 
   assignment            DailyAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)

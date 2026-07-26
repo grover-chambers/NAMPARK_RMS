@@ -1,93 +1,77 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { generateReportPDF } from "@/lib/reports/pdf";
+import { generateReturnsPDF } from "@/lib/reports/pdf";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get("startDate");
     const endDate = searchParams.get("endDate");
 
-    const shiftWhere: any = {};
+    const where: any = {};
     if (startDate || endDate) {
-      shiftWhere.assignment = { date: {} };
-      if (startDate) shiftWhere.assignment.date.gte = new Date(startDate);
-      if (endDate) shiftWhere.assignment.date.lte = new Date(endDate);
+      where.createdAt = {};
+      if (startDate) where.createdAt.gte = new Date(startDate);
+      if (endDate) where.createdAt.lte = new Date(endDate);
     }
 
     const returns = await prisma.return.findMany({
-      where: { driverShift: shiftWhere },
-      include: { sku: true, driverShift: { include: { assignment: { include: { route: true, driver: true } } } } },
-      orderBy: { id: "desc" },
+      where,
+      include: {
+        sku: true,
+        driverShift: {
+          include: {
+            assignment: {
+              include: { route: true, driver: true },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
     });
 
-    const byTypeMap = new Map<string, { type: string; count: number; amount: number }>();
+    const byType: Record<string, { type: string; count: number; amount: number }> = {};
+    const detailed: { date: string; driver: string; route: string; sku: string; type: string; qty: number; amount: number }[] = [];
+
     for (const r of returns) {
-      const key = r.type;
-      if (!byTypeMap.has(key)) byTypeMap.set(key, { type: key, count: 0, amount: 0 });
-      const item = byTypeMap.get(key)!;
-      item.count += r.quantity || 0;
-      item.amount += r.amount || 0;
+      const typeName = r.type.replace(/_/g, " ");
+      if (!byType[r.type]) {
+        byType[r.type] = { type: typeName, count: 0, amount: 0 };
+      }
+      byType[r.type].count += r.quantity;
+      byType[r.type].amount += r.amount;
+
+      detailed.push({
+        date: r.driverShift?.assignment?.date?.toISOString() ?? r.createdAt.toISOString(),
+        driver: r.driverShift?.assignment?.driver?.name ?? "—",
+        route: r.driverShift?.assignment?.route?.name ?? "—",
+        sku: r.sku.name,
+        type: typeName,
+        qty: r.quantity,
+        amount: r.amount,
+      });
     }
-    const byType = Array.from(byTypeMap.values());
 
-    const detailRows = returns.map((r) => [
-      r.driverShift?.assignment?.date
-        ? new Date(r.driverShift.assignment.date).toLocaleDateString("en-KE")
-        : "—",
-      r.driverShift?.assignment?.driver?.name || "—",
-      r.driverShift?.assignment?.route?.name || "—",
-      r.sku?.name || "—",
-      r.type.replace(/_/g, " "),
-      r.quantity || 0,
-      `KES ${(r.amount || 0).toLocaleString()}`,
-    ]);
+    const types = Object.values(byType).sort((a, b) => b.amount - a.amount);
 
-    const dateLabel = startDate && endDate
-      ? `${new Date(startDate).toLocaleDateString("en-KE")} - ${new Date(endDate).toLocaleDateString("en-KE")}`
-      : "All Time";
+    const doc = generateReturnsPDF(types, detailed);
+    const pdfBuffer = Buffer.from(doc.output("arraybuffer"));
 
-    const pdf = generateReportPDF(
-      { title: "Returns Analysis", dateRange: dateLabel },
-      [
-        {
-          title: "Returns by Type",
-          columns: [
-            { header: "Type", key: "type", width: 60 },
-            { header: "Count", key: "count", width: 30, align: "center" as const },
-            { header: "Amount (KES)", key: "amount", width: 40, align: "right" as const },
-          ],
-          rows: byType.map((r) => [r.type.replace(/_/g, " "), r.count, `KES ${r.amount.toLocaleString()}`]),
-        },
-        {
-          title: "Detailed Returns",
-          columns: [
-            { header: "Date", key: "date", width: 30 },
-            { header: "Driver", key: "driver", width: 35 },
-            { header: "Route", key: "route", width: 30 },
-            { header: "SKU", key: "sku", width: 45 },
-            { header: "Type", key: "type", width: 30 },
-            { header: "Qty", key: "qty", width: 15, align: "center" as const },
-            { header: "Amount", key: "amount", width: 25, align: "right" as const },
-          ],
-          rows: detailRows,
-        },
-      ],
-    );
-
-    const buffer = pdf.output("arraybuffer");
-    return new NextResponse(buffer, {
+    return new NextResponse(pdfBuffer, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="nampark-returns.pdf"`,
       },
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed" }, { status: 500 });
+  } catch (error) {
+    console.error("Returns PDF error:", error);
+    return NextResponse.json({ error: "Failed to generate PDF" }, { status: 500 });
   }
 }

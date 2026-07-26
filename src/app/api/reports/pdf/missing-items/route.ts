@@ -1,13 +1,15 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { generateReportPDF } from "@/lib/reports/pdf";
+import { generateMissingItemsPDF } from "@/lib/reports/pdf";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const { searchParams } = new URL(request.url);
     const startDate = searchParams.get("startDate");
@@ -24,52 +26,36 @@ export async function GET(request: Request) {
 
     const items = await prisma.missingItem.findMany({
       where,
-      include: { sku: true, route: true, assignment: { include: { salesRep: true, driver: true } } },
-      orderBy: { date: "desc" },
+      include: { sku: true, route: true },
     });
 
-    const bySkuMap = new Map<string, any>();
+    const grouped: Record<string, { sku: string; count: number; cartons: number; customers: number; routes: Set<string> }> = {};
     for (const item of items) {
-      const key = item.sku.name;
-      if (!bySkuMap.has(key)) bySkuMap.set(key, { name: key, count: 0, cartons: 0, customers: 0, routes: new Set<string>() });
-      const s = bySkuMap.get(key);
-      s.count += 1;
-      s.cartons += item.cartonsAffected || 0;
-      s.customers += item.customerCountAffected || 0;
-      s.routes.add(item.route.name);
+      const key = item.skuId;
+      if (!grouped[key]) {
+        grouped[key] = { sku: item.sku.name, count: 0, cartons: 0, customers: 0, routes: new Set() };
+      }
+      grouped[key].count++;
+      grouped[key].cartons += item.cartonsAffected;
+      grouped[key].customers += item.customerCountAffected;
+      grouped[key].routes.add(item.route.name);
     }
-    const bySku = Array.from(bySkuMap.values())
-      .map((s) => ({ ...s, routes: Array.from(s.routes).join(", ") }))
+
+    const sorted = Object.values(grouped)
+      .map((g) => ({ ...g, routes: Array.from(g.routes) }))
       .sort((a, b) => b.cartons - a.cartons);
 
-    const dateLabel = startDate && endDate
-      ? `${new Date(startDate).toLocaleDateString("en-KE")} - ${new Date(endDate).toLocaleDateString("en-KE")}`
-      : "All Time";
+    const doc = generateMissingItemsPDF(sorted);
+    const pdfBuffer = Buffer.from(doc.output("arraybuffer"));
 
-    const pdf = generateReportPDF(
-      { title: "Missing Items Report", dateRange: dateLabel },
-      [{
-        title: "Missing Items by Product",
-        columns: [
-          { header: "#", key: "rank", width: 15, align: "center" as const },
-          { header: "Product", key: "name", width: 60 },
-          { header: "Routes Affected", key: "routes", width: 50 },
-          { header: "Frequency", key: "count", width: 25, align: "center" as const },
-          { header: "Cartons", key: "cartons", width: 25, align: "center" as const },
-          { header: "Customers", key: "customers", width: 25, align: "center" as const },
-        ],
-        rows: bySku.map((s, i) => [i + 1, s.name, s.routes, s.count, s.cartons, s.customers]),
-      }],
-    );
-
-    const buffer = pdf.output("arraybuffer");
-    return new NextResponse(buffer, {
+    return new NextResponse(pdfBuffer, {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="nampark-missing-items.pdf"`,
       },
     });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed" }, { status: 500 });
+  } catch (error) {
+    console.error("Missing items PDF error:", error);
+    return NextResponse.json({ error: "Failed to generate PDF" }, { status: 500 });
   }
 }

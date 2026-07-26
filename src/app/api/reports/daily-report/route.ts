@@ -79,6 +79,7 @@ export async function GET(request: NextRequest) {
 
       return {
         id: assignment.id,
+        date: assignment.date.toISOString(),
         route: {
           id: assignment.route.id,
           name: assignment.route.name,
@@ -88,24 +89,26 @@ export async function GET(request: NextRequest) {
         driver: { id: assignment.driver.id, name: assignment.driver.name },
         vehicle: { id: assignment.vehicle.id, registration: assignment.vehicle.registration },
         shift: {
-          shiftOpen: shift?.shiftOpen ?? null,
-          shiftClose: shift?.shiftClose ?? null,
+          shiftOpen: shift?.shiftOpen?.toISOString() ?? null,
+          shiftClose: shift?.shiftClose?.toISOString() ?? null,
           customerCountTarget,
           customerCountActual,
           salesTarget,
           salesActual,
           complaints: shift?.complaints ?? 0,
-          reportSubmissionTime: shift?.reportSubmissionTime ?? null,
+          complaintTarget: shift?.complaintTarget ?? 0,
+          reportSubmissionTime: shift?.reportSubmissionTime?.toISOString() ?? null,
           comments: shift?.comments ?? null,
+          kpiReasons: (shift?.kpiReasons as Record<string, string>) ?? {},
         },
         driverShift: {
-          loadingStart: dShift?.loadingStart ?? null,
-          loadingEnd: dShift?.loadingEnd ?? null,
-          shiftStart: dShift?.shiftStart ?? null,
-          gatePassTime: dShift?.gatePassTime ?? null,
-          shiftEnd: dShift?.shiftEnd ?? null,
+          loadingStart: dShift?.loadingStart?.toISOString() ?? null,
+          loadingEnd: dShift?.loadingEnd?.toISOString() ?? null,
+          shiftStart: dShift?.shiftStart?.toISOString() ?? null,
+          gatePassTime: dShift?.gatePassTime?.toISOString() ?? null,
+          shiftEnd: dShift?.shiftEnd?.toISOString() ?? null,
           customerCountActual: dShift?.customerCountActual ?? 0,
-          reportSubmissionTime: dShift?.reportSubmissionTime ?? null,
+          reportSubmissionTime: dShift?.reportSubmissionTime?.toISOString() ?? null,
           comments: dShift?.comments ?? null,
         },
         orders: assignment.orders.map((o) => ({
