@@ -42,6 +42,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
   }
 
+  if (user.role === "SALES_REP" && user.salesRepId && assignment.salesRepId !== user.salesRepId) {
+    return NextResponse.json({ error: "You can only submit reports for your own assignments" }, { status: 403 });
+  }
+
   const now = new Date();
 
   await prisma.$transaction(async (tx: TxClient) => {
