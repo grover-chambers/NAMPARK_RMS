@@ -15,7 +15,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (status === "unauthenticated") router.push("/auth/login");
-  }, [status, router]);
+    if (status === "authenticated" && (session?.user as any)?.role === "CASHIER") router.push("/cashier");
+  }, [status, router, session]);
 
   if (status === "loading") {
     return (

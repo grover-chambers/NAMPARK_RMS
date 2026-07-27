@@ -75,6 +75,13 @@ const driverNavItems: NavItem[] = [
   { label: "Returns", href: "/returns", icon: <RotateCcw size={18} />, roles: ["DRIVER"] },
 ];
 
+const cashierNavItems: NavItem[] = [
+  { label: "Dashboard", href: "/cashier", icon: <LayoutDashboard size={18} />, roles: ["CASHIER"], section: "Accounts" },
+  { label: "Accounts", href: "/cashier/accounts", icon: <Users size={18} />, roles: ["CASHIER"], section: "Accounts" },
+  { label: "Alerts", href: "/cashier/alerts", icon: <AlertTriangle size={18} />, roles: ["CASHIER"], section: "Alerts" },
+  { label: "Unblock Requests", href: "/cashier/requests", icon: <FileText size={18} />, roles: ["CASHIER"], section: "Alerts" },
+];
+
 // Role → color scheme
 const roleThemes: Record<string, { gradient: string; activeBg: string; mobileGradient: string }> = {
   ADMIN: {
@@ -96,6 +103,11 @@ const roleThemes: Record<string, { gradient: string; activeBg: string; mobileGra
     gradient: "from-slate-700 to-slate-800",
     activeBg: "bg-teal-600",
     mobileGradient: "from-slate-700 to-slate-800",
+  },
+  CASHIER: {
+    gradient: "from-indigo-700 to-indigo-800",
+    activeBg: "bg-indigo-600",
+    mobileGradient: "from-indigo-700 to-indigo-800",
   },
 };
 
@@ -126,6 +138,7 @@ export default function Sidebar() {
   if (role === "SUPERVISOR") items = supervisorNavItems;
   else if (role === "SALES_REP") items = repNavItems;
   else if (role === "DRIVER") items = driverNavItems;
+  else if (role === "CASHIER") items = cashierNavItems;
 
   const filtered = items.filter((item) => item.roles.includes(role));
   const isActive = (href: string) => pathname === href || pathname?.startsWith(href + "/");
@@ -134,8 +147,8 @@ export default function Sidebar() {
     signOut({ redirect: false }).then(() => router.push("/auth/login"));
   };
 
-  // Group items by section (admin only)
-  const grouped = role === "ADMIN"
+  // Group items by section (admin and cashier have sections)
+  const grouped = (role === "ADMIN" || role === "CASHIER")
     ? filtered.reduce((acc, item) => {
         const section = item.section || "Other";
         if (!acc[section]) acc[section] = [];
@@ -192,7 +205,7 @@ export default function Sidebar() {
       <nav className="flex-1 overflow-y-auto py-2 px-2">
         {Object.entries(grouped).map(([section, sectionItems]) => (
           <div key={section} className="mb-1">
-            {!collapsed && role === "ADMIN" && (
+            {!collapsed && (role === "ADMIN" || role === "CASHIER") && (
               <p className="text-[10px] uppercase tracking-widest text-white/30 px-3 pt-3 pb-1 font-semibold">
                 {section}
               </p>

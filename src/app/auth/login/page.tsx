@@ -34,6 +34,7 @@ export default function LoginPage() {
 
         if (role === "DRIVER") router.push("/daily-report/driver");
         else if (role === "SALES_REP") router.push("/daily-report/rep");
+        else if (role === "CASHIER") router.push("/cashier");
         else router.push("/dashboard");
       }
     } catch {

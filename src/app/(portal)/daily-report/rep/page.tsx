@@ -80,6 +80,109 @@ interface Assignment {
   }[];
 }
 
+function UnblockRequestSection() {
+  const { data: session } = useSession();
+  const [requests, setRequests] = useState<any[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ routeOrRetailerRef: "", amount: "", justification: "" });
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/cashier/unblock-requests")
+      .then((r) => r.json())
+      .then((d) => { setRequests(d.data || []); setLoading(false); });
+  }, []);
+
+  const handleSubmit = async () => {
+    if (!form.routeOrRetailerRef || !form.amount || !form.justification) return;
+    setSubmitting(true);
+    try {
+      // Get the user's cashier account
+      const accRes = await fetch("/api/cashier/accounts");
+      const accData = await accRes.json();
+      const accounts = accData.data || [];
+      const salesRepId = (session?.user as any)?.salesRepId;
+      const myAccount = accounts.find((a: any) => a.repId === salesRepId);
+      if (!myAccount) { setToast({ type: "error", message: "No cashier account found" }); setSubmitting(false); return; }
+
+      const res = await fetch("/api/cashier/unblock-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId: myAccount.id,
+          routeOrRetailerRef: form.routeOrRetailerRef,
+          amount: parseFloat(form.amount),
+          justification: form.justification,
+        }),
+      });
+      if (res.ok) {
+        setToast({ type: "success", message: "Request submitted" });
+        setShowForm(false);
+        setForm({ routeOrRetailerRef: "", amount: "", justification: "" });
+        const d = await res.json();
+        setRequests((prev) => [d.data, ...prev]);
+      } else {
+        setToast({ type: "error", message: "Failed to submit" });
+      }
+    } catch { setToast({ type: "error", message: "Network error" }); }
+    setSubmitting(false);
+  };
+
+  if (loading) return null;
+
+  return (
+    <div className="card p-6">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2">
+          <AlertCircle className="text-amber-600" size={18} />
+          <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Account Unblock Requests</h2>
+        </div>
+        <button onClick={() => setShowForm(!showForm)} className="text-sm text-indigo-600 hover:text-indigo-800">
+          {showForm ? "Cancel" : "+ New Request"}
+        </button>
+      </div>
+
+      {toast && (
+        <div className={`mb-3 p-2 rounded-lg text-sm ${toast.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"}`}>
+          {toast.message}
+        </div>
+      )}
+
+      {showForm && (
+        <div className="bg-slate-50 rounded-lg p-4 space-y-3 mb-4">
+          <input type="text" value={form.routeOrRetailerRef} onChange={(e) => setForm({ ...form, routeOrRetailerRef: e.target.value })} placeholder="Route or retailer reference (REF)" className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+          <input type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="Amount (KES)" className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" />
+          <textarea value={form.justification} onChange={(e) => setForm({ ...form, justification: e.target.value })} placeholder="Justification for unblocking..." className="w-full border border-slate-200 rounded-lg p-2.5 text-sm" rows={3} />
+          <button onClick={handleSubmit} disabled={submitting || !form.routeOrRetailerRef || !form.amount || !form.justification} className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-indigo-700 disabled:opacity-50">
+            {submitting ? "Submitting..." : "Submit Request"}
+          </button>
+        </div>
+      )}
+
+      {requests.length > 0 && (
+        <div className="space-y-2">
+          {requests.slice(0, 5).map((r: any) => (
+            <div key={r.id} className="flex items-center justify-between bg-slate-50 rounded-lg p-3 text-sm">
+              <div>
+                <span className={`px-2 py-0.5 rounded-full text-xs ${
+                  r.status === "approved" ? "bg-green-100 text-green-700"
+                    : r.status === "rejected" ? "bg-red-100 text-red-700"
+                    : "bg-amber-100 text-amber-700"
+                }`}>{r.status}</span>
+                <span className="ml-2 text-slate-600">{r.routeOrRetailerRef}</span>
+                <span className="ml-2 font-medium">{new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", minimumFractionDigits: 0 }).format(r.amount)}</span>
+              </div>
+              <span className="text-xs text-slate-400">{new Date(r.requestedAt).toLocaleDateString("en-KE")}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function SalesRepReportPage() {
   const { status } = useSession();
   const router = useRouter();
@@ -658,6 +761,9 @@ export default function SalesRepReportPage() {
             placeholder="Any additional notes or observations..."
           />
         </div>
+
+        {/* ── Unblock Request ── */}
+        <UnblockRequestSection />
       </div>
 
       {/* ── Sticky Submit Bar ── */}

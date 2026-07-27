@@ -3,6 +3,14 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "./prisma";
 
+export function requireRole(session: any, ...roles: string[]) {
+  const role = session?.user?.role;
+  if (!roles.includes(role)) {
+    return null;
+  }
+  return role;
+}
+
 export const authOptions: NextAuthOptions = {
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
   pages: { signIn: "/auth/login" },

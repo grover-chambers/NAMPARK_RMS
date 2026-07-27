@@ -200,10 +200,37 @@ async function main() {
     });
   }
 
+  // Create cashier user
+  const cashierUser = await prisma.user.upsert({
+    where: { email: "cashier@nampark.com" },
+    update: {},
+    create: {
+      email: "cashier@nampark.com",
+      name: "Nancy Wanjiku",
+      password: hash,
+      role: "CASHIER",
+    },
+  });
+
+  // Create cashier accounts for each sales rep
+  const allReps = await prisma.salesRep.findMany();
+  for (const rep of allReps) {
+    await prisma.cashierAccount.create({
+      data: {
+        repId: rep.id,
+        status: "open",
+        currentBalance: 0,
+        creditReferenceAmount: 1100000, // default — admin/cashier adjusts per rep performance
+        autoBlockThresholdPct: 25,
+      },
+    });
+  }
+
   console.log("Seed complete!");
   console.log("Login credentials:");
   console.log("  Admin: admin@nampark.com / admin123");
   console.log("  Supervisor: supervisor@nampark.com / password123");
+  console.log("  Cashier: cashier@nampark.com / password123");
   console.log("  Sales Reps: <name>@nampark.com / password123");
   console.log("  Drivers: <name>@nampark.com / password123");
 }

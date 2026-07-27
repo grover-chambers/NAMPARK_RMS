@@ -955,4 +955,291 @@ export function generateReturnsPDF(
   return doc;
 }
 
+// ============================================================
+// KH Account Unblock Letter Template
+// ============================================================
+
+const KH = {
+  navy: [11, 42, 74] as [number, number, number],
+  navyDark: [20, 33, 61] as [number, number, number],
+  gold: [212, 175, 55] as [number, number, number],
+  cream: [255, 253, 245] as [number, number, number],
+  textNavy: [11, 42, 74] as [number, number, number],
+  white: [255, 255, 255] as [number, number, number],
+};
+
+function drawDoubleBorder(doc: jsPDF, pw: number, ph: number) {
+  doc.setDrawColor(...KH.gold);
+  doc.setLineWidth(0.5);
+  doc.rect(8, 8, pw - 16, ph - 16);
+  doc.setDrawColor(...KH.navy);
+  doc.setLineWidth(0.3);
+  doc.rect(10, 10, pw - 20, ph - 20);
+}
+
+function drawCornerRibbons(doc: jsPDF, pw: number, ph: number) {
+  // Top-left ribbon
+  doc.setFillColor(...KH.navy);
+  doc.triangle(0, 0, 45, 0, 0, 45, "F");
+  doc.setFillColor(...KH.gold);
+  doc.triangle(0, 0, 25, 0, 0, 25, "F");
+
+  // Bottom-right ribbon
+  doc.setFillColor(...KH.navy);
+  doc.triangle(pw, ph, pw - 45, ph, pw, ph - 45, "F");
+  doc.setFillColor(...KH.gold);
+  doc.triangle(pw, ph, pw - 25, ph, pw, ph - 25, "F");
+}
+
+function drawCrest(doc: jsPDF, x: number, y: number) {
+  // Laurel wreath — simplified as two symmetric curved paths using lines
+  doc.setDrawColor(...KH.gold);
+  doc.setLineWidth(0.6);
+  // Left branch arc (approximated with lines)
+  for (let i = 0; i < 8; i++) {
+    const angle = (200 + i * 17) * Math.PI / 180;
+    const rx = 14, ry = 20;
+    const cx = x - 2, cy = y - 18;
+    const px = cx + rx * Math.cos(angle);
+    const py = cy + ry * Math.sin(angle);
+    const angle2 = (200 + (i + 1) * 17) * Math.PI / 180;
+    const px2 = cx + rx * Math.cos(angle2);
+    const py2 = cy + ry * Math.sin(angle2);
+    doc.line(px, py, px2, py2);
+  }
+  // Right branch arc
+  for (let i = 0; i < 8; i++) {
+    const angle = (200 + i * 17) * Math.PI / 180;
+    const rx = 14, ry = 20;
+    const cx = x + 2, cy = y - 18;
+    const px = cx - rx * Math.cos(angle);
+    const py = cy + ry * Math.sin(angle);
+    const angle2 = (200 + (i + 1) * 17) * Math.PI / 180;
+    const px2 = cx - rx * Math.cos(angle2);
+    const py2 = cy + ry * Math.sin(angle2);
+    doc.line(px, py, px2, py2);
+  }
+
+  // Star
+  doc.setFillColor(...KH.gold);
+  doc.setFontSize(8);
+  doc.text("\u2605", x, y - 28, { align: "center" });
+
+  // KH monogram
+  doc.setTextColor(...KH.navy);
+  doc.setFontSize(28);
+  doc.setFont("times", "bold");
+  doc.text("KH", x, y, { align: "center" });
+
+  // Company name
+  doc.setFontSize(9);
+  doc.setFont("times", "bold");
+  doc.text("KANINI HARAKA", x, y + 10, { align: "center" });
+  doc.setFontSize(7);
+  doc.setTextColor(...KH.gold);
+  doc.setFont("times", "normal");
+  doc.text("ENTERPRISE", x, y + 16, { align: "center" });
+
+  // Gold flourish
+  doc.setDrawColor(...KH.gold);
+  doc.setLineWidth(0.4);
+  doc.line(x - 30, y + 22, x + 30, y + 22);
+  doc.setFillColor(...KH.gold);
+  doc.triangle(x - 2, y + 20, x + 2, y + 24, x - 2, y + 24, "F");
+  doc.triangle(x + 2, y + 20, x - 2, y + 24, x + 2, y + 24, "F");
+}
+
+function drawInfoBlock(doc: jsPDF, x: number, y: number, repName: string, dateStr: string) {
+  const items = [
+    { icon: "\u263A", label: repName },
+    { icon: "\u2302", label: "Nampark Branch, AnswerPort Ltd" },
+    { icon: "\u2611", label: dateStr },
+  ];
+
+  // Vertical gold hairline
+  doc.setDrawColor(...KH.gold);
+  doc.setLineWidth(0.3);
+  doc.line(x, y, x, y + 40);
+
+  items.forEach((item, i) => {
+    const iy = y + 4 + i * 14;
+    // Circle icon
+    doc.setFillColor(...KH.navy);
+    doc.circle(x, iy, 3, "F");
+    doc.setTextColor(...KH.white);
+    doc.setFontSize(5);
+    doc.text(item.icon, x, iy + 1, { align: "center" });
+    // Text
+    doc.setTextColor(...KH.textNavy);
+    doc.setFontSize(7);
+    doc.setFont("times", "normal");
+    doc.text(item.label, x + 7, iy + 1.5);
+  });
+}
+
+function drawToBanner(doc: jsPDF, x: number, y: number, text: string) {
+  // Navy pill with notch
+  doc.setFillColor(...KH.navyDark);
+  doc.roundedRect(x, y, 25, 10, 2, 2, "F");
+  // Notch (triangle cut on right)
+  doc.setFillColor(...KH.cream);
+  doc.triangle(x + 25, y, x + 30, y + 5, x + 25, y + 10, "F");
+  // Text
+  doc.setTextColor(...KH.gold);
+  doc.setFontSize(10);
+  doc.setFont("times", "italic");
+  doc.text("To:", x + 4, y + 7);
+}
+
+function drawRefBanner(doc: jsPDF, pw: number, y: number, text: string) {
+  const bannerW = pw - 60;
+  const bx = 30;
+
+  // Navy banner
+  doc.setFillColor(...KH.navyDark);
+  doc.rect(bx, y, bannerW, 12, "F");
+
+  // Gold double-line border
+  doc.setDrawColor(...KH.gold);
+  doc.setLineWidth(0.4);
+  doc.rect(bx + 2, y + 2, bannerW - 4, 8);
+
+  // Flourishes on sides
+  doc.setFillColor(...KH.gold);
+  doc.circle(bx - 5, y + 6, 1.5, "F");
+  doc.circle(bx + bannerW + 5, y + 6, 1.5, "F");
+
+  // Text
+  doc.setTextColor(...KH.white);
+  doc.setFontSize(9);
+  doc.setFont("times", "bold");
+  doc.text(text, pw / 2, y + 8, { align: "center" });
+}
+
+function drawIconRail(doc: jsPDF, x: number, y: number) {
+  const icons = ["\u260E", "\u2191", "\u2714"];
+  doc.setDrawColor(...KH.gold);
+  doc.setLineWidth(0.2);
+  doc.setLineDashPattern([1, 1], 0);
+  doc.line(x, y, x, y + 40);
+  doc.setLineDashPattern([], 0);
+
+  icons.forEach((icon, i) => {
+    const iy = y + 5 + i * 14;
+    doc.setDrawColor(...KH.navy);
+    doc.setLineWidth(0.3);
+    doc.circle(x, iy, 4, "S");
+    doc.setTextColor(...KH.navy);
+    doc.setFontSize(7);
+    doc.text(icon, x, iy + 1.5, { align: "center" });
+  });
+}
+
+function drawFooterKH(doc: jsPDF, pw: number, ph: number) {
+  const fy = ph - 30;
+  const fw = 120;
+  const fx = (pw - fw) / 2;
+
+  doc.setDrawColor(...KH.gold);
+  doc.setLineWidth(0.4);
+  doc.roundedRect(fx, fy, fw, 20, 3, 3, "S");
+
+  doc.setTextColor(...KH.navy);
+  doc.setFontSize(10);
+  doc.setFont("times", "bold");
+  doc.text("TOGETHER WE SUCCEED!", pw / 2, fy + 7, { align: "center" });
+
+  doc.setDrawColor(...KH.gold);
+  doc.setLineWidth(0.3);
+  doc.line(fx + 10, fy + 10, fx + fw - 10, fy + 10);
+
+  doc.setFontSize(7);
+  doc.setFont("times", "italic");
+  doc.setTextColor(...KH.textNavy);
+  doc.text("Thank you for your continued support and cooperation.", pw / 2, fy + 14, { align: "center" });
+
+  doc.setTextColor(...KH.gold);
+  doc.text("* We appreciate your prompt assistance. *", pw / 2, fy + 18, { align: "center" });
+}
+
+interface LetterData {
+  repName: string;
+  amount: number;
+  justification: string;
+  routeOrRetailerRef: string;
+  requestedAt: string;
+}
+
+export function generateAccountLetter(data: LetterData): jsPDF {
+  const doc = new jsPDF("p", "mm", "a4");
+  const pw = doc.internal.pageSize.getWidth();
+  const ph = doc.internal.pageSize.getHeight();
+
+  // Background
+  doc.setFillColor(...KH.cream);
+  doc.rect(0, 0, pw, ph, "F");
+
+  // Border & ribbons
+  drawDoubleBorder(doc, pw, ph);
+  drawCornerRibbons(doc, pw, ph);
+
+  // Crest (top-left)
+  drawCrest(doc, 45, 65);
+
+  // Info block (top-right)
+  const dateObj = new Date(data.requestedAt);
+  const day = dateObj.getDate();
+  const suffix = day === 1 || day === 21 || day === 31 ? "st" : day === 2 || day === 22 ? "nd" : day === 3 || day === 23 ? "rd" : "th";
+  const dateStr = `${day}${suffix} ${dateObj.toLocaleDateString("en-KE", { month: "short", year: "numeric" })}`;
+  drawInfoBlock(doc, pw - 50, 45, data.repName, dateStr);
+
+  // To: banner
+  drawToBanner(doc, 20, 100, "To:");
+  doc.setTextColor(...KH.textNavy);
+  doc.setFontSize(10);
+  doc.setFont("times", "bold");
+  doc.text("The Cashier,", 20, 118);
+  doc.text("Nampark Branch", 20, 125);
+  doc.text("AnswerPort Ltd", 20, 132);
+
+  // Salutation
+  doc.setTextColor(...KH.textNavy);
+  doc.setFontSize(10);
+  doc.setFont("times", "italic");
+  doc.text("Dear sir,", 20, 150);
+
+  // REF banner
+  drawRefBanner(doc, pw, 162, `REF: Requesting to Unblock ${data.repName}'s Account`);
+
+  // Body
+  const bodyText = `I, ${data.repName}, request you to unblock my account with a pending balance of KES ${data.amount.toLocaleString()}. ${data.justification}`;
+  doc.setTextColor(...KH.textNavy);
+  doc.setFontSize(10);
+  doc.setFont("times", "normal");
+  const bodyLines = doc.splitTextToSize(bodyText, pw - 60);
+  doc.text(bodyLines, 20, 185);
+
+  // Icon rail
+  drawIconRail(doc, 15, 200);
+
+  // Signature
+  const sigY = 185 + bodyLines.length * 5 + 15;
+  doc.setTextColor(...KH.textNavy);
+  doc.setFontSize(10);
+  doc.setFont("times", "italic");
+  doc.text("Yours faithfully,", pw - 30, sigY, { align: "right" });
+  doc.setFont("times", "bold");
+  doc.text(data.repName, pw - 30, sigY + 8, { align: "right" });
+
+  // Gold flourish under signature
+  doc.setDrawColor(...KH.gold);
+  doc.setLineWidth(0.4);
+  doc.line(pw - 65, sigY + 12, pw - 15, sigY + 12);
+
+  // Footer
+  drawFooterKH(doc, pw, ph);
+
+  return doc;
+}
+
 export { computeReport };

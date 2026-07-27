@@ -11,6 +11,7 @@ enum UserRole {
   SUPERVISOR
   SALES_REP
   DRIVER
+  CASHIER
 }
 
 enum VehicleStatus {
@@ -60,6 +61,11 @@ model User {
   salesRep      SalesRep?
   driver        Driver?
 
+  blockedBlockEvents    AccountBlockEvent[]   @relation("BlockEventCashier")
+  reviewedRequests      AccountUnblockRequest[] @relation("ReviewRequestCashier")
+  acknowledgedAlerts    AccountAlert[]        @relation("AlertCashier")
+  requestedUnblockReqs  AccountUnblockRequest[] @relation("RequestByRep")
+
   @@map("users")
 }
 
@@ -76,6 +82,7 @@ model Route {
   missingItems      MissingItem[]
   pricingSurveys    PricingSurvey[]
   salesRepRoutes    SalesRepRoute[]
+  creditSales       CreditSale[]
 
   @@map("routes")
 }
@@ -89,6 +96,7 @@ model SalesRep {
   assignments       DailyAssignment[]
   pricingSurveys    PricingSurvey[]
   routes            SalesRepRoute[]
+  cashierAccount    CashierAccount?
 
   @@map("sales_reps")
 }
@@ -398,4 +406,116 @@ model ShareToken {
   createdAt   DateTime @default(now())
 
   @@map("share_tokens")
+}
+
+model CashierAccount {
+  id                      String    @id @default(cuid())
+  repId                   String    @unique
+  status                  String    @default("open") // 'open' | 'blocked'
+  currentBalance          Float     @default(0)
+  creditReferenceAmount   Float     @default(0)
+  autoBlockThresholdPct   Float     @default(25)
+  lastOpenedAt            DateTime?
+  lastBlockedAt           DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  rep                     SalesRep  @relation(fields: [repId], references: [id], onDelete: Cascade)
+  creditSales             CreditSale[]
+  blockEvents             AccountBlockEvent[]
+  unblockRequests         AccountUnblockRequest[]
+  openLogs                AccountOpenLog[]
+  alerts                  AccountAlert[]
+
+  @@map("cashier_accounts")
+}
+
+model CreditSale {
+  id              String    @id @default(cuid())
+  accountId       String
+  retailerName    String
+  routeId         String
+  amount          Float
+  incurredDate    DateTime  @db.Date
+  settled         Boolean   @default(false)
+  settledDate     DateTime?
+  settledAmount   Float?
+  createdAt       DateTime  @default(now())
+
+  account         CashierAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  route           Route          @relation(fields: [routeId], references: [id])
+  blockEvents     AccountBlockEvent[]
+
+  @@map("credit_sales")
+}
+
+model AccountBlockEvent {
+  id                    String    @id @default(cuid())
+  accountId             String
+  blockedAt             DateTime  @default(now())
+  blockType             String    // 'manual' | 'auto'
+  blockedByCashierId    String?
+  reason                String?
+  balanceAtTrigger      Float?
+  pctAtTrigger          Float?
+  relatedCreditSaleId   String?
+  unblockedAt           DateTime?
+  unblockReason         String?   // 'debt_settled' | 'cashier_override'
+
+  account               CashierAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  blockedByCashier      User?          @relation("BlockEventCashier", fields: [blockedByCashierId], references: [id])
+  relatedCreditSale     CreditSale?    @relation(fields: [relatedCreditSaleId], references: [id])
+
+  @@map("account_block_events")
+}
+
+model AccountUnblockRequest {
+  id                    String    @id @default(cuid())
+  accountId             String
+  requestedByRepId      String
+  requestedAt           DateTime  @default(now())
+  routeOrRetailerRef    String
+  amount                Float
+  justification         String
+  status                String    @default("pending") // 'pending' | 'approved' | 'rejected'
+  reviewedByCashierId   String?
+  reviewedAt            DateTime?
+  letterPdfUrl          String?
+
+  account               CashierAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  requestedByRep        User           @relation("RequestByRep", fields: [requestedByRepId], references: [id])
+  reviewedByCashier     User?          @relation("ReviewRequestCashier", fields: [reviewedByCashierId], references: [id])
+
+  @@map("account_unblock_requests")
+}
+
+model AccountOpenLog {
+  id                    String    @id @default(cuid())
+  accountId             String
+  logDate               DateTime  @db.Date
+  scheduledOpenTime     DateTime?
+  actualOpenTime        DateTime?
+  delayMinutes          Float     @default(0)
+  createdAt             DateTime  @default(now())
+
+  account               CashierAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("account_open_log")
+}
+
+model AccountAlert {
+  id                          String    @id @default(cuid())
+  accountId                   String
+  alertType                   String    @default("auto_block")
+  triggeredAt                 DateTime  @default(now())
+  balanceAtTrigger            Float?
+  pctAtTrigger                Float?
+  acknowledged                Boolean   @default(false)
+  acknowledgedByCashierId     String?
+  acknowledgedAt              DateTime?
+
+  account                     CashierAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  acknowledgedByCashier       User?          @relation("AlertCashier", fields: [acknowledgedByCashierId], references: [id])
+
+  @@map("account_alerts")
 }
