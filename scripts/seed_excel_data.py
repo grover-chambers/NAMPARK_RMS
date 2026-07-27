@@ -495,11 +495,159 @@ def main():
     print(f"  Challenges: {cur.fetchone()[0]} total")
 
     # ================================================================
+    # PHASE 8: Seed Missing Sales (MISSING SALES sheet)
+    # ================================================================
+    print("\n=== Phase 8: Seeding Missing Sales ===")
+    try:
+        ws = wb["MISSING SALES"]
+        missing_count = 0
+
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            raw_date, week, rep, route, product, qty, cartons, unit_price, amount, alt_avail, alt_product, is_stockout = row[:12]
+            if not product:
+                continue
+
+            d = parse_date(raw_date)
+            if not d:
+                continue
+
+            route_name = str(route).strip() if route else ""
+            route_id = find_route_id(route_name)
+            if not route_id:
+                continue
+
+            key = (d, route_id)
+            a_id = assignment_cache.get(key)
+            if not a_id:
+                continue
+
+            sku_id = find_sku_id(product)
+
+            alt_available = False
+            if alt_avail:
+                s = str(alt_avail).strip().upper()
+                alt_available = s in ("YES", "TRUE", "1", "Y")
+
+            true_stockout = False
+            if is_stockout:
+                s = str(is_stockout).strip().upper()
+                true_stockout = s in ("YES", "TRUE", "1", "Y")
+
+            try:
+                cur.execute("""
+                    INSERT INTO missing_items (id, "assignmentId", "skuId", "routeId", date, week,
+                        "customerCountAffected", "cartonsAffected", "unitPrice", amount,
+                        "alternativeAvailable", "alternativeProduct", "isTrueStockout", notes, "createdAt")
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                """, (cuid(), a_id, sku_id, route_id, d, str(week)[:20] if week else None,
+                      pi(qty), pi(cartons), pf(unit_price), pf(amount),
+                      alt_available, str(alt_product)[:200] if alt_product else None,
+                      true_stockout, None))
+                missing_count += 1
+            except:
+                pass
+
+        cur.execute("SELECT count(*) FROM missing_items")
+        print(f"  Missing Items: {cur.fetchone()[0]} total")
+    except KeyError:
+        print("  Sheet 'MISSING SALES' not found, skipping")
+
+    # ================================================================
+    # PHASE 9: Seed Inventory Counts (INVENTORY sheet)
+    # ================================================================
+    print("\n=== Phase 9: Seeding Inventory Counts ===")
+    try:
+        ws = wb["INVENTORY"]
+        inventory_count = 0
+
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            store, raw_date, product, category, physical_qty, system_qty, unit_price, last_stocked, expiry_date, notes = row[:10]
+            if not product:
+                continue
+
+            d = parse_date(raw_date) if raw_date else date.today()
+            if not d:
+                d = date.today()
+
+            sku_id = find_sku_id(product)
+            if not sku_id:
+                continue
+
+            phys = pi(physical_qty)
+            sys_q = pi(system_qty)
+            variance = phys - sys_q
+            up = pf(unit_price)
+            stock_value = phys * up
+
+            ls = parse_date(last_stocked) if last_stocked else None
+            exp = parse_date(expiry_date) if expiry_date else None
+
+            try:
+                cur.execute("""
+                    INSERT INTO inventory_counts (id, store, "countDate", "skuId", category,
+                        "physicalQty", "systemQty", variance, "unitPrice", "stockValue",
+                        "lastStocked", "expiryDate", notes, "createdAt")
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW())
+                """, (cuid(), str(store)[:100] if store else "Main Warehouse",
+                      d, sku_id, str(category)[:50] if category else None,
+                      phys, sys_q, variance, up, stock_value,
+                      ls, exp, str(notes)[:500] if notes else None))
+                inventory_count += 1
+            except:
+                pass
+
+        cur.execute("SELECT count(*) FROM inventory_counts")
+        print(f"  Inventory Counts: {cur.fetchone()[0]} total")
+    except KeyError:
+        print("  Sheet 'INVENTORY' not found, skipping")
+
+    # ================================================================
+    # PHASE 10: Seed Vehicle Inspections (INSPECTION CHECKLIST sheet)
+    # ================================================================
+    print("\n=== Phase 10: Seeding Vehicle Inspections ===")
+    try:
+        ws = wb["INSPECTION CHECKLIST"]
+        inspection_count = 0
+
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            raw_date, vehicle_reg, item, status, reason = row[:5]
+            if not item:
+                continue
+
+            d = parse_date(raw_date) if raw_date else date.today()
+            if not d:
+                d = date.today()
+
+            v_id = vehicle_map.get(str(vehicle_reg).strip()) if vehicle_reg else None
+            if not v_id:
+                # Try first vehicle as default
+                v_id = list(vehicle_map.values())[0] if vehicle_map else None
+            if not v_id:
+                continue
+
+            try:
+                cur.execute("""
+                    INSERT INTO vehicle_inspections (id, "vehicleId", date, type, item, status, reason, "createdAt")
+                    VALUES (%s, %s, %s, 'DAILY', %s, %s, %s, NOW())
+                """, (cuid(), v_id, d, str(item)[:200],
+                      str(status)[:50] if status else "OK",
+                      str(reason)[:500] if reason else None))
+                inspection_count += 1
+            except:
+                pass
+
+        cur.execute("SELECT count(*) FROM vehicle_inspections")
+        print(f"  Vehicle Inspections: {cur.fetchone()[0]} total")
+    except KeyError:
+        print("  Sheet 'INSPECTION CHECKLIST' not found, skipping")
+
+    # ================================================================
     # FINAL SUMMARY
     # ================================================================
     print("\n=== FINAL COUNTS ===")
     for table in ["daily_assignments", "sales_rep_shifts", "driver_shifts", "orders",
-                   "returns", "fleet_daily", "pricing_surveys", "challenges"]:
+                   "returns", "fleet_daily", "pricing_surveys", "challenges",
+                   "missing_items", "inventory_counts", "vehicle_inspections"]:
         cur.execute(f'SELECT count(*) FROM "{table}"')
         print(f"  {table}: {cur.fetchone()[0]}")
 

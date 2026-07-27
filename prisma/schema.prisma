@@ -142,6 +142,7 @@ model SkuCatalog {
   missingItems      MissingItem[]
   returns           Return[]
   pricingSurveys    PricingSurvey[]
+  inventoryCounts   InventoryCount[]
 
   @@map("sku_catalog")
 }
@@ -196,6 +197,8 @@ model DriverShift {
   assignmentId        String    @unique
   loadingStart        DateTime?
   loadingEnd          DateTime?
+  loadingStartTarget  DateTime?
+  loadingEndTarget    DateTime?
   shiftStart          DateTime?
   gatePassTime        DateTime?
   shiftEnd            DateTime?
@@ -254,20 +257,25 @@ model DeliveryStop {
 }
 
 model MissingItem {
-  id                  String    @id @default(cuid())
-  assignmentId        String
-  skuId               String
-  routeId             String
-  date                DateTime  @db.Date
-  week                String?
-  customerCountAffected Int     @default(0)
-  cartonsAffected     Int       @default(0)
-  notes               String?
-  createdAt           DateTime  @default(now())
+  id                    String    @id @default(cuid())
+  assignmentId          String
+  skuId                 String
+  routeId               String
+  date                  DateTime  @db.Date
+  week                  String?
+  customerCountAffected Int       @default(0)
+  cartonsAffected       Int       @default(0)
+  unitPrice             Float?
+  amount                Float?
+  alternativeAvailable  Boolean   @default(false)
+  alternativeProduct    String?
+  isTrueStockout        Boolean   @default(false)
+  notes                 String?
+  createdAt             DateTime  @default(now())
 
-  assignment          DailyAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
-  sku                 SkuCatalog @relation(fields: [skuId], references: [id])
-  route               Route     @relation(fields: [routeId], references: [id])
+  assignment            DailyAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  sku                   SkuCatalog @relation(fields: [skuId], references: [id])
+  route                 Route     @relation(fields: [routeId], references: [id])
 
   @@map("missing_items")
 }
@@ -357,6 +365,27 @@ model Challenge {
   createdAt   DateTime  @default(now())
 
   @@map("challenges")
+}
+
+model InventoryCount {
+  id              String    @id @default(cuid())
+  store           String
+  countDate       DateTime  @db.Date
+  skuId           String
+  category        String?
+  physicalQty     Int       @default(0)
+  systemQty       Int       @default(0)
+  variance        Int       @default(0)
+  unitPrice       Float     @default(0)
+  stockValue      Float     @default(0)
+  lastStocked     DateTime?
+  expiryDate      DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+
+  sku             SkuCatalog @relation(fields: [skuId], references: [id])
+
+  @@map("inventory_counts")
 }
 
 model ShareToken {

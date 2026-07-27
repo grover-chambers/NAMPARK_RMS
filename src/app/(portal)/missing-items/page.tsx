@@ -17,8 +17,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  Legend,
 } from "recharts";
-import { toCSVRow } from "@/lib/utils";
+import { formatCurrency, toCSVRow } from "@/lib/utils";
 import ExportBar from "@/components/reports/ExportBar";
 
 interface RouteItem {
@@ -33,6 +34,10 @@ interface MissingSku {
   cartonsAffected: number;
   customersAffected: number;
   routesAffected: string[];
+  totalUnitPrice: number;
+  totalAmount: number;
+  trueStockoutCount: number;
+  softenedCount: number;
 }
 
 interface MissingItemRaw {
@@ -41,9 +46,16 @@ interface MissingItemRaw {
   routeId: string;
   customerCountAffected: number;
   cartonsAffected: number;
+  unitPrice?: number | null;
+  amount?: number | null;
+  alternativeAvailable?: boolean;
+  alternativeProduct?: string | null;
+  isTrueStockout?: boolean;
   sku: { name: string };
   route: { name: string };
 }
+
+type FilterType = "all" | "stockout" | "softened";
 
 function getWeekStart(offset: number): string {
   const d = new Date();
@@ -82,6 +94,7 @@ function getWeekLabel(offset: number): string {
 export default function MissingItemsPage() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [routeId, setRouteId] = useState("");
+  const [filterType, setFilterType] = useState<FilterType>("all");
   const [loading, setLoading] = useState(true);
   const [routes, setRoutes] = useState<RouteItem[]>([]);
   const [items, setItems] = useState<MissingItemRaw[]>([]);
@@ -118,9 +131,20 @@ export default function MissingItemsPage() {
     fetchData();
   }, [startDate, endDate, routeId]);
 
+  const filteredItems = items.filter((item) => {
+    if (filterType === "stockout") return item.isTrueStockout === true;
+    if (filterType === "softened") return item.alternativeAvailable === true;
+    return true;
+  });
+
+  const trueStockoutCount = items.filter((i) => i.isTrueStockout === true).length;
+  const trueStockoutValue = items
+    .filter((i) => i.isTrueStockout === true)
+    .reduce((sum, i) => sum + (i.amount ?? 0), 0);
+
   const ranked: (MissingSku & { routesAffected: string[] })[] = (() => {
-    const bySku: Record<string, MissingSku & { routesAffected: string[] }> = {};
-    for (const item of items) {
+    const bySku: Record<string, MissingSku> = {};
+    for (const item of filteredItems) {
       const key = item.skuId;
       if (!bySku[key]) {
         bySku[key] = {
@@ -129,11 +153,19 @@ export default function MissingItemsPage() {
           cartonsAffected: 0,
           customersAffected: 0,
           routesAffected: [],
+          totalUnitPrice: 0,
+          totalAmount: 0,
+          trueStockoutCount: 0,
+          softenedCount: 0,
         };
       }
       bySku[key].count++;
       bySku[key].cartonsAffected += item.cartonsAffected;
       bySku[key].customersAffected += item.customerCountAffected;
+      bySku[key].totalUnitPrice += item.unitPrice ?? 0;
+      bySku[key].totalAmount += item.amount ?? 0;
+      if (item.isTrueStockout === true) bySku[key].trueStockoutCount++;
+      if (item.alternativeAvailable === true) bySku[key].softenedCount++;
       if (!bySku[key].routesAffected.includes(item.route.name)) {
         bySku[key].routesAffected.push(item.route.name);
       }
@@ -143,8 +175,8 @@ export default function MissingItemsPage() {
 
   const top10 = ranked.slice(0, 10).map((r) => ({
     name: r.skuName.length > 20 ? r.skuName.slice(0, 20) + "…" : r.skuName,
-    count: r.count,
-    customers: r.customersAffected,
+    trueStockouts: r.trueStockoutCount,
+    softened: r.softenedCount,
   }));
 
   if (loading) {
@@ -193,10 +225,23 @@ export default function MissingItemsPage() {
               }}
               onCSVExport={() => {
                 const rows = [
-                  toCSVRow(["#", "Product", "Routes Affected", "Frequency", "Cartons", "Customers"]),
-                  ...ranked.map((s, i) =>
-                    toCSVRow([i + 1, s.skuName, s.routesAffected.join(", "), s.count, s.cartonsAffected, s.customersAffected])
-                  ),
+                  toCSVRow(["#", "Product", "Routes Affected", "Frequency", "Cartons", "Customers", "Unit Price", "Amount", "Type"]),
+                  ...ranked.map((s, i) => {
+                    const hasStockout = s.trueStockoutCount > 0;
+                    const hasSoftened = s.softenedCount > 0;
+                    const typeLabel = hasStockout && hasSoftened ? "Mixed" : hasStockout ? "Stockout" : hasSoftened ? "Softened" : "Unknown";
+                    return toCSVRow([
+                      i + 1,
+                      s.skuName,
+                      s.routesAffected.join(", "),
+                      s.count,
+                      s.cartonsAffected,
+                      s.customersAffected,
+                      s.totalUnitPrice,
+                      s.totalAmount,
+                      typeLabel,
+                    ]);
+                  }),
                 ];
                 return rows.join("\n");
               }}
@@ -205,7 +250,31 @@ export default function MissingItemsPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="flex items-center gap-2 flex-wrap">
+        {([
+          { key: "all", label: "All Items" },
+          { key: "stockout", label: "True Stockouts" },
+          { key: "softened", label: "Alternative Available" },
+        ] as const).map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFilterType(f.key)}
+            className={`px-3 py-1.5 text-sm rounded-lg font-medium transition-colors ${
+              filterType === f.key
+                ? f.key === "stockout"
+                  ? "bg-red-100 text-red-700 ring-1 ring-red-200"
+                  : f.key === "softened"
+                    ? "bg-amber-100 text-amber-700 ring-1 ring-amber-200"
+                    : "bg-slate-100 text-slate-700 ring-1 ring-slate-200"
+                : "bg-white text-slate-500 hover:bg-slate-50 ring-1 ring-slate-200"
+            }`}
+          >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="stat-card">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
@@ -241,6 +310,20 @@ export default function MissingItemsPage() {
             </div>
           </div>
         </div>
+        <div className="stat-card">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-red-50 flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5 text-red-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-slate-800">{trueStockoutCount}</p>
+              <p className="text-xs text-slate-500">True Stockouts</p>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                Lost value: {formatCurrency(trueStockoutValue)}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="card p-6">
@@ -257,7 +340,9 @@ export default function MissingItemsPage() {
               <Tooltip
                 contentStyle={{ borderRadius: "12px", border: "1px solid #e2e8f0", fontSize: "12px" }}
               />
-              <Bar dataKey="count" fill="#0d9488" radius={[0, 4, 4, 0]} name="Reports" />
+              <Legend wrapperStyle={{ fontSize: "12px" }} />
+              <Bar dataKey="trueStockouts" stackId="a" fill="#dc2626" radius={[0, 0, 0, 0]} name="True Stockouts" />
+              <Bar dataKey="softened" stackId="a" fill="#b45309" radius={[0, 4, 4, 0]} name="Softened" />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -273,22 +358,42 @@ export default function MissingItemsPage() {
               <tr className="border-b border-slate-100">
                 <th className="table-header text-center">#</th>
                 <th className="table-header">SKU Name</th>
+                <th className="table-header">Type</th>
                 <th className="table-header">Routes Affected</th>
                 <th className="table-header text-right">Customers Affected</th>
                 <th className="table-header text-right">Cartons</th>
+                <th className="table-header text-right">Unit Price</th>
+                <th className="table-header text-right">Amount</th>
                 <th className="table-header text-right">Frequency</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {ranked.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-8 text-center text-slate-400 text-sm">
+                  <td colSpan={9} className="p-8 text-center text-slate-400 text-sm">
                     No missing items for this period.
                   </td>
                 </tr>
               ) : (
                 ranked.map((row, i) => {
                   const isChronic = row.routesAffected.length > 3;
+                  const hasStockout = row.trueStockoutCount > 0;
+                  const hasSoftened = row.softenedCount > 0;
+                  const typeLabel = hasStockout && hasSoftened
+                    ? "Mixed"
+                    : hasStockout
+                      ? "Stockout"
+                      : hasSoftened
+                        ? "Softened"
+                        : "Unknown";
+                  const typeBadge =
+                    typeLabel === "Stockout"
+                      ? "badge-danger"
+                      : typeLabel === "Softened"
+                        ? "badge-warning"
+                        : typeLabel === "Mixed"
+                          ? "badge-info"
+                          : "bg-slate-100 text-slate-500";
                   return (
                     <tr
                       key={row.skuName}
@@ -302,6 +407,11 @@ export default function MissingItemsPage() {
                         )}
                       </td>
                       <td className="table-cell">
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${typeBadge}`}>
+                          {typeLabel}
+                        </span>
+                      </td>
+                      <td className="table-cell">
                         <div className="flex flex-wrap gap-1">
                           {row.routesAffected.map((r) => (
                             <span key={r} className="badge-info text-[10px]">{r}</span>
@@ -310,6 +420,12 @@ export default function MissingItemsPage() {
                       </td>
                       <td className="table-cell text-right">{row.customersAffected}</td>
                       <td className="table-cell text-right">{row.cartonsAffected}</td>
+                      <td className="table-cell text-right">
+                        {row.totalUnitPrice > 0 ? formatCurrency(row.totalUnitPrice) : "—"}
+                      </td>
+                      <td className="table-cell text-right font-medium">
+                        {row.totalAmount > 0 ? formatCurrency(row.totalAmount) : "—"}
+                      </td>
                       <td className="table-cell text-right font-semibold">{row.count}</td>
                     </tr>
                   );

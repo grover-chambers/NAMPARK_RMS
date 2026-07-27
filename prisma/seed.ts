@@ -178,6 +178,28 @@ async function main() {
     await prisma.skuCatalog.create({ data: s });
   }
 
+  // Create challenges
+  const challengesData = [
+    { gap: "Delivery truck breakdown on Kandara route", whatAction: "Arrange backup vehicle from partner fleet", who: "Fleet Manager", when: "2026-06-15", resolved: true },
+    { gap: "Stock shortage of Ndovu 2kg in Molo route", whatAction: "Increase weekly allocation by 20%", who: "Warehouse", when: "2026-06-18", resolved: true },
+    { gap: "Customer complaints on expired Sugar 50kg", whatAction: "Implement FIFO check before dispatch", who: "Quality Assurance", when: "2026-06-20", resolved: false },
+    { gap: "Pricing inconsistency in Gatundu market", whatAction: "Conduct pricing survey update", who: "Nahashon Nene", when: "2026-06-22", resolved: false },
+    { gap: "Low sales in Mununga route", whatAction: "Increase route frequency and promo activity", who: "Joseph Macharia", when: "2026-07-01", resolved: false },
+  ];
+
+  for (const c of challengesData) {
+    await prisma.challenge.create({
+      data: {
+        date: new Date(),
+        gap: c.gap,
+        whatAction: c.whatAction,
+        who: c.who,
+        when: new Date(c.when),
+        resolved: c.resolved,
+      },
+    });
+  }
+
   console.log("Seed complete!");
   console.log("Login credentials:");
   console.log("  Admin: admin@nampark.com / admin123");

@@ -106,6 +106,8 @@ export async function GET(request: NextRequest) {
         driverShift: {
           loadingStart: dShift?.loadingStart?.toISOString() ?? null,
           loadingEnd: dShift?.loadingEnd?.toISOString() ?? null,
+          loadingStartTarget: dShift?.loadingStartTarget?.toISOString() ?? null,
+          loadingEndTarget: dShift?.loadingEndTarget?.toISOString() ?? null,
           shiftStart: dShift?.shiftStart?.toISOString() ?? null,
           gatePassTime: dShift?.gatePassTime?.toISOString() ?? null,
           shiftEnd: dShift?.shiftEnd?.toISOString() ?? null,

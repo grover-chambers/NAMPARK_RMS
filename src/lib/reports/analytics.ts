@@ -37,6 +37,8 @@ export interface RouteReportData {
   driverShift: {
     loadingStart: string | null;
     loadingEnd: string | null;
+    loadingStartTarget: string | null;
+    loadingEndTarget: string | null;
     shiftStart: string | null;
     gatePassTime: string | null;
     shiftEnd: string | null;
@@ -55,6 +57,11 @@ export interface RouteReportData {
     sku: string;
     customerCountAffected: number;
     cartonsAffected: number;
+    unitPrice?: number | null;
+    amount?: number | null;
+    alternativeAvailable?: boolean;
+    alternativeProduct?: string | null;
+    isTrueStockout?: boolean;
     notes: string | null;
   }[];
   summary: {
@@ -229,5 +236,72 @@ export function computeWeeklyStats(reports: ComputedReport[]) {
     totalCustomers,
     metCount,
     notMetCount,
+  };
+}
+
+export interface InventoryCountData {
+  id: string;
+  store: string;
+  countDate: string;
+  skuId: string;
+  category: string | null;
+  physicalQty: number;
+  systemQty: number;
+  variance: number;
+  unitPrice: number;
+  stockValue: number;
+  lastStocked: string | null;
+  expiryDate: string | null;
+  notes: string | null;
+  sku: { name: string; category: string | null };
+}
+
+export interface InventoryStats {
+  totalStockValue: number;
+  totalVariance: number;
+  shrinkageItems: number;
+  slowMovingItems: number;
+  expiringItems: number;
+  totalRecords: number;
+  byStore: { store: string; stockValue: number; variance: number; count: number }[];
+}
+
+export function computeInventoryStats(counts: InventoryCountData[]): InventoryStats {
+  const totalStockValue = counts.reduce((sum, c) => sum + c.stockValue, 0);
+  const totalVariance = counts.reduce((sum, c) => sum + c.variance, 0);
+  const shrinkageItems = counts.filter((c) => c.variance < 0).length;
+
+  const slowMovingItems = counts.filter((c) => {
+    if (!c.lastStocked) return false;
+    const daysSince = (Date.now() - new Date(c.lastStocked).getTime()) / (1000 * 60 * 60 * 24);
+    return daysSince > 14;
+  }).length;
+
+  const expiringItems = counts.filter((c) => {
+    if (!c.expiryDate) return false;
+    const daysUntil = (new Date(c.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    return daysUntil <= 30 && daysUntil >= 0;
+  }).length;
+
+  const storeMap: Record<string, { stockValue: number; variance: number; count: number }> = {};
+  for (const c of counts) {
+    if (!storeMap[c.store]) storeMap[c.store] = { stockValue: 0, variance: 0, count: 0 };
+    storeMap[c.store].stockValue += c.stockValue;
+    storeMap[c.store].variance += c.variance;
+    storeMap[c.store].count++;
+  }
+
+  const byStore = Object.entries(storeMap)
+    .map(([store, data]) => ({ store, ...data }))
+    .sort((a, b) => b.stockValue - a.stockValue);
+
+  return {
+    totalStockValue,
+    totalVariance,
+    shrinkageItems,
+    slowMovingItems,
+    expiringItems,
+    totalRecords: counts.length,
+    byStore,
   };
 }
