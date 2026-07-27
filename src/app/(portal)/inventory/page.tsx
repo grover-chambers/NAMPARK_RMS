@@ -145,8 +145,8 @@ function InventoryCountsTab() {
         setSummary(invData.data.summary ?? {});
       }
       setSkus(Array.isArray(skuData) ? skuData : []);
-    } catch {
-      // silent
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }

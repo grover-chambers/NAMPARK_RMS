@@ -117,8 +117,8 @@ export default function ReturnsPage() {
           setTotalReturns(data.data.totalReturns ?? 0);
           setTotalAmount(data.data.totalAmount ?? 0);
         }
-      } catch {
-        // silent
+      } catch (err) {
+        console.error(err);
       } finally {
         setLoading(false);
       }

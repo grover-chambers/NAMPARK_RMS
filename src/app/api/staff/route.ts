@@ -18,23 +18,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Name, email, password and role required" }, { status: 400 });
     }
 
+    const validRoles = ["ADMIN", "SUPERVISOR", "SALES_REP", "DRIVER", "CASHIER"];
+    if (!validRoles.includes(role)) {
+      return NextResponse.json({ error: "Invalid role" }, { status: 400 });
+    }
+
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) return NextResponse.json({ error: "Email already exists" }, { status: 409 });
 
     const hashed = await bcrypt.hash(password, 10);
-    const user = await prisma.user.create({
-      data: { name, email, password: hashed, role: role as any, phone },
+
+    const user = await prisma.$transaction(async (tx) => {
+      const u = await tx.user.create({
+        data: { name, email, password: hashed, role: role as any, phone },
+      });
+
+      if (role === "SALES_REP") {
+        await tx.salesRep.create({ data: { userId: u.id, name } });
+      } else if (role === "DRIVER") {
+        await tx.driver.create({ data: { userId: u.id, name } });
+      }
+
+      return u;
     });
 
-    if (role === "SALES_REP") {
-      await prisma.salesRep.create({ data: { userId: user.id, name } });
-    } else if (role === "DRIVER") {
-      await prisma.driver.create({ data: { userId: user.id, name } });
-    }
-
     return NextResponse.json({ success: true, user: { id: user.id, name: user.name, role: user.role } });
-  } catch (e: any) {
-    return NextResponse.json({ error: e.message || "Failed" }, { status: 500 });
+  } catch {
+    return NextResponse.json({ error: "Failed to create staff member" }, { status: 500 });
   }
 }
 

@@ -108,12 +108,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
+  const parsedAmount = parseFloat(amount);
+  if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    return NextResponse.json({ error: "Amount must be a positive number" }, { status: 400 });
+  }
+
+  const account = await prisma.cashierAccount.findUnique({ where: { id: accountId } });
+  if (!account) return NextResponse.json({ error: "Account not found" }, { status: 404 });
+
   const sale = await prisma.creditSale.create({
     data: {
       accountId,
       retailerName,
       routeId,
-      amount: parseFloat(amount),
+      amount: parsedAmount,
       incurredDate: incurredDate ? new Date(incurredDate) : new Date(),
     },
   });

@@ -63,6 +63,8 @@ export default function ExportBar({
       a.download = `${filename}.csv`;
       a.click();
       URL.revokeObjectURL(url);
+    } catch (e) {
+      console.error("CSV export failed:", e);
     } finally {
       setLoading(null);
     }
@@ -76,6 +78,7 @@ export default function ExportBar({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reportType, params }),
       });
+      if (!res.ok) throw new Error("Share failed");
       const data = await res.json();
       if (data.success) {
         const url = `${window.location.origin}/reports/shared/${data.token}`;

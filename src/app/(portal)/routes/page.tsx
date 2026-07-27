@@ -56,7 +56,8 @@ export default function RoutesPage() {
         });
         setRoutes(Array.from(routeMap.values()));
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }

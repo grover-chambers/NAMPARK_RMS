@@ -65,7 +65,8 @@ export default function DriversPage() {
         });
         setDrivers(Array.from(driverMap.values()));
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }

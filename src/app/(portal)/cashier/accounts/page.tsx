@@ -14,6 +14,7 @@ interface Account {
   status: string;
   currentBalance: number;
   creditReferenceAmount: number;
+  autoBlockThresholdPct: number;
   lastOpenedAt: string | null;
   rep: { name: string; user: { name: string } };
 }
@@ -86,7 +87,7 @@ export default function CashierAccountsPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-slate-500">Threshold %</span>
-                  <span className={`font-medium ${threshold >= account.creditReferenceAmount * 0.25 / account.creditReferenceAmount * 100 ? "text-red-600" : "text-green-600"}`}>
+                  <span className={`font-medium ${threshold >= account.autoBlockThresholdPct ? "text-red-600" : "text-green-600"}`}>
                     {threshold}%
                   </span>
                 </div>

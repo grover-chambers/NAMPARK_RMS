@@ -76,7 +76,8 @@ export default function AssignmentsPage() {
       );
       const data = await res.json();
       if (data.success) setAssignments(data.data);
-    } catch {
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -98,7 +99,8 @@ export default function AssignmentsPage() {
       setSalesReps(repsData.data || repsData || []);
       setDrivers(driversData.data || driversData || []);
       setVehicles(Array.isArray(vehiclesData) ? vehiclesData : vehiclesData.data || []);
-    } catch {
+    } catch (err) {
+      console.error(err);
     }
   }
 

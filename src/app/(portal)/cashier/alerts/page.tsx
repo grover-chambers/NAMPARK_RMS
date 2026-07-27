@@ -42,8 +42,12 @@ export default function CashierAlertsPage() {
   }, [status, filter]);
 
   const handleAcknowledge = async (id: string) => {
-    await fetch(`/api/cashier/alerts/${id}/acknowledge`, { method: "POST" });
-    setAlerts((prev) => prev.map((a) => a.id === id ? { ...a, acknowledged: true, acknowledgedAt: new Date().toISOString() } : a));
+    try {
+      const res = await fetch(`/api/cashier/alerts/${id}/acknowledge`, { method: "POST" });
+      if (res.ok) {
+        setAlerts((prev) => prev.map((a) => a.id === id ? { ...a, acknowledged: true, acknowledgedAt: new Date().toISOString() } : a));
+      }
+    } catch {}
   };
 
   if (loading) {

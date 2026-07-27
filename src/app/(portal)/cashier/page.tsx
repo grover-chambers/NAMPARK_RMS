@@ -86,8 +86,10 @@ export default function CashierDashboard() {
                 </div>
                 <button
                   onClick={async () => {
-                    await fetch(`/api/cashier/alerts/${alert.id}/acknowledge`, { method: "POST" });
-                    setAlerts((prev) => prev.filter((a) => a.id !== alert.id));
+                    try {
+                      const res = await fetch(`/api/cashier/alerts/${alert.id}/acknowledge`, { method: "POST" });
+                      if (res.ok) setAlerts((prev) => prev.filter((a) => a.id !== alert.id));
+                    } catch {}
                   }}
                   className="text-xs bg-red-100 text-red-700 px-3 py-1 rounded-lg hover:bg-red-200"
                 >

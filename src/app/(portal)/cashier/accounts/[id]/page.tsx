@@ -51,47 +51,61 @@ export default function CashierAccountDetailPage() {
 
   const handleBlock = async () => {
     setActionLoading(true);
-    await fetch(`/api/cashier/accounts/${accountId}/block`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason: blockReason }),
-    });
-    setShowBlockModal(false);
-    setBlockReason("");
-    fetchAccount();
+    try {
+      const res = await fetch(`/api/cashier/accounts/${accountId}/block`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: blockReason }),
+      });
+      if (res.ok) {
+        setShowBlockModal(false);
+        setBlockReason("");
+        fetchAccount();
+      }
+    } catch {}
     setActionLoading(false);
   };
 
   const handleUnblock = async () => {
     setActionLoading(true);
-    await fetch(`/api/cashier/accounts/${accountId}/unblock`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ reason: unblockReason }),
-    });
-    setShowUnblockModal(false);
-    setUnblockReason("");
-    fetchAccount();
+    try {
+      const res = await fetch(`/api/cashier/accounts/${accountId}/unblock`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: unblockReason }),
+      });
+      if (res.ok) {
+        setShowUnblockModal(false);
+        setUnblockReason("");
+        fetchAccount();
+      }
+    } catch {}
     setActionLoading(false);
   };
 
   const handleAddCredit = async () => {
     setActionLoading(true);
-    await fetch("/api/cashier/credit-sales", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accountId, ...creditForm, amount: parseFloat(creditForm.amount) }),
-    });
-    setShowCreditModal(false);
-    setCreditForm({ retailerName: "", routeId: "", amount: "", incurredDate: "" });
-    fetchAccount();
+    try {
+      const res = await fetch("/api/cashier/credit-sales", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ accountId, ...creditForm, amount: parseFloat(creditForm.amount) }),
+      });
+      if (res.ok) {
+        setShowCreditModal(false);
+        setCreditForm({ retailerName: "", routeId: "", amount: "", incurredDate: "" });
+        fetchAccount();
+      }
+    } catch {}
     setActionLoading(false);
   };
 
   const handleSettle = async (saleId: string) => {
     setActionLoading(true);
-    await fetch(`/api/cashier/credit-sales/${saleId}/settle`, { method: "POST" });
-    fetchAccount();
+    try {
+      const res = await fetch(`/api/cashier/credit-sales/${saleId}/settle`, { method: "POST" });
+      if (res.ok) fetchAccount();
+    } catch {}
     setActionLoading(false);
   };
 
@@ -366,8 +380,7 @@ export default function CashierAccountDetailPage() {
 
       {/* Block Modal */}
       <Modal isOpen={showBlockModal} onClose={() => setShowBlockModal(false)} title="Block Account">
-        <div className="p-6 space-y-4">
-          <h2 className="font-serif font-bold text-slate-800">Block Account</h2>
+        <div className="space-y-4">
           <p className="text-sm text-slate-500">Block {account.rep.name}&apos;s account. They will not be able to start their shift until the account is unblocked.</p>
           <textarea
             value={blockReason}
@@ -387,8 +400,7 @@ export default function CashierAccountDetailPage() {
 
       {/* Unblock Modal */}
       <Modal isOpen={showUnblockModal} onClose={() => setShowUnblockModal(false)} title="Unblock Account">
-        <div className="p-6 space-y-4">
-          <h2 className="font-serif font-bold text-slate-800">Unblock Account</h2>
+        <div className="space-y-4">
           <p className="text-sm text-slate-500">Manually unblock {account.rep.name}&apos;s account (override).</p>
           <textarea
             value={unblockReason}
@@ -408,8 +420,7 @@ export default function CashierAccountDetailPage() {
 
       {/* Add Credit Modal */}
       <Modal isOpen={showCreditModal} onClose={() => setShowCreditModal(false)} title="Record Credit Sale">
-        <div className="p-6 space-y-4">
-          <h2 className="font-serif font-bold text-slate-800">Record Credit Sale</h2>
+        <div className="space-y-4">
           <div className="space-y-3">
             <input
               type="text"

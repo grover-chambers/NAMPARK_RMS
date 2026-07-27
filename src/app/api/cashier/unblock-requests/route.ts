@@ -51,6 +51,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
+  const parsedAmount = parseFloat(amount);
+  if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    return NextResponse.json({ error: "Amount must be a positive number" }, { status: 400 });
+  }
+
   const userId = (session?.user as any).id;
 
   const request = await prisma.accountUnblockRequest.create({
@@ -58,7 +63,7 @@ export async function POST(req: NextRequest) {
       accountId,
       requestedByRepId: userId,
       routeOrRetailerRef,
-      amount: parseFloat(amount),
+      amount: parsedAmount,
       justification,
     },
   });

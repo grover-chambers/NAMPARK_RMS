@@ -101,7 +101,8 @@ export default function PerformancePage() {
         const json = await res.json();
         if (json.success) setData(json.data);
         else setData(null);
-      } catch {
+      } catch (err) {
+        console.error(err);
         setData(null);
       } finally {
         setLoading(false);

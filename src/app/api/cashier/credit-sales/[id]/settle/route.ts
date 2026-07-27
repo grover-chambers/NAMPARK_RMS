@@ -57,15 +57,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!sale) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (sale.settled) return NextResponse.json({ error: "Already settled" }, { status: 400 });
 
-  const body = await req.json();
-  const settleAmount = body.amount ? parseFloat(body.amount) : sale.amount;
-
   await prisma.creditSale.update({
     where: { id },
     data: {
       settled: true,
       settledDate: new Date(),
-      settledAmount: settleAmount,
+      settledAmount: sale.amount,
     },
   });
 

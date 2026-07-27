@@ -46,30 +46,36 @@ export default function CashierRequestsPage() {
 
   const handleReview = async (id: string, decision: "approved" | "rejected") => {
     setActionLoading(id);
-    await fetch(`/api/cashier/unblock-requests/${id}/review`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ decision }),
-    });
-    setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: decision, reviewedAt: new Date().toISOString() } : r));
+    try {
+      const res = await fetch(`/api/cashier/unblock-requests/${id}/review`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ decision }),
+      });
+      if (res.ok) {
+        setRequests((prev) => prev.map((r) => r.id === id ? { ...r, status: decision, reviewedAt: new Date().toISOString() } : r));
+      }
+    } catch {}
     setActionLoading(null);
   };
 
   const handleDownloadLetter = async (requestId: string) => {
-    const res = await fetch("/api/reports/pdf/account-letter", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ requestId }),
-    });
-    if (res.ok) {
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `unblock-letter-${requestId.slice(0, 8)}.pdf`;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+    try {
+      const res = await fetch("/api/reports/pdf/account-letter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ requestId }),
+      });
+      if (res.ok) {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `unblock-letter-${requestId.slice(0, 8)}.pdf`;
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    } catch {}
   };
 
   if (loading) {

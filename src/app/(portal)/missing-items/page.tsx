@@ -122,8 +122,8 @@ export default function MissingItemsPage() {
         setRoutes(routesData.success ? routesData.data : []);
         setItems(missingData.success ? missingData.data.items : []);
         setTotal(missingData.success ? missingData.data.total : 0);
-      } catch {
-        // silent
+      } catch (err) {
+        console.error(err);
       } finally {
         setLoading(false);
       }

@@ -106,8 +106,8 @@ export default function PricingPage() {
         setRoutes(routesData.success ? routesData.data : []);
         setSalesReps(repsData.success ? repsData.data : []);
         setSkus(skuData);
-      } catch {
-        // silent
+      } catch (err) {
+        console.error(err);
       } finally {
         setLoading(false);
       }

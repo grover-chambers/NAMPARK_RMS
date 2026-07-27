@@ -20,28 +20,20 @@ export async function GET(request: NextRequest) {
     const driverId = searchParams.get("driverId");
 
     const driverShiftWhere: any = {};
-    if (driverId) {
-      const assignments = await prisma.dailyAssignment.findMany({
-        where: { driverId },
-        select: { id: true },
-      });
-      driverShiftWhere.assignmentId = {
-        in: assignments.map((a) => a.id),
-      };
-    }
-
+    const assignmentFilters: any = {};
+    if (driverId) assignmentFilters.driverId = driverId;
     if (startDate || endDate) {
-      const assignmentWhere: any = {};
-      assignmentWhere.date = {};
-      if (startDate) assignmentWhere.date.gte = new Date(startDate);
-      if (endDate) assignmentWhere.date.lte = new Date(endDate);
-      if (routeId) assignmentWhere.routeId = routeId;
+      assignmentFilters.date = {};
+      if (startDate) assignmentFilters.date.gte = new Date(startDate);
+      if (endDate) assignmentFilters.date.lte = new Date(endDate);
+    }
+    if (routeId) assignmentFilters.routeId = routeId;
 
+    if (Object.keys(assignmentFilters).length > 0) {
       const filteredAssignments = await prisma.dailyAssignment.findMany({
-        where: assignmentWhere,
+        where: assignmentFilters,
         select: { id: true },
       });
-
       driverShiftWhere.assignmentId = {
         in: filteredAssignments.map((a) => a.id),
       };

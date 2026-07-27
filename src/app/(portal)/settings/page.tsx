@@ -175,7 +175,7 @@ function RoutesSettings() {
       const res = await fetch("/api/routes");
       const data = await res.json();
       setRoutes(data.data || data || []);
-    } catch { /* */ }
+    } catch (err) { console.error(err); }
     setLoading(false);
   };
 
@@ -202,7 +202,7 @@ function RoutesSettings() {
       });
       setShowAdd(false);
       fetchRoutes();
-    } catch { /* */ }
+    } catch (err) { console.error(err); }
     setSaving(false);
   };
 
@@ -294,7 +294,7 @@ function StaffSettings() {
       const res = await fetch("/api/staff");
       const data = await res.json();
       setUsers(data.data || data || []);
-    } catch { /* */ }
+    } catch (err) { console.error(err); }
     setLoading(false);
   };
 
@@ -428,7 +428,7 @@ function CatalogSettings() {
       const res = await fetch("/api/sku");
       const data = await res.json();
       setSkus(Array.isArray(data) ? data : data.data || []);
-    } catch { /* */ }
+    } catch (err) { console.error(err); }
     setLoading(false);
   };
 

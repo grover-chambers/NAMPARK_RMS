@@ -122,7 +122,8 @@ export default function VehiclesPage() {
         });
         setFleetForms(forms);
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
     } finally {
       setLoading(false);
     }
@@ -146,7 +147,8 @@ export default function VehiclesPage() {
       if (data.success) {
         fetchFleet();
       }
-    } catch {
+    } catch (err) {
+      console.error(err);
     } finally {
       setSaving(null);
     }
