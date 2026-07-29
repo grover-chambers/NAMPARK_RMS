@@ -30,6 +30,8 @@ export async function POST(req: NextRequest) {
       shiftStart,
       gatePassTime,
       shiftEnd,
+      fuelCost,
+      mileageCovered,
       customerCountActual,
       comments,
       returns,
@@ -62,6 +64,8 @@ export async function POST(req: NextRequest) {
         shiftStart: shiftStart ? new Date(shiftStart) : null,
         gatePassTime: gatePassTime ? new Date(gatePassTime) : null,
         shiftEnd: shiftEnd ? new Date(shiftEnd) : null,
+        fuelCost: fuelCost != null ? Number(fuelCost) : null,
+        mileageCovered: mileageCovered != null ? Number(mileageCovered) : null,
         customerCountActual: Number(customerCountActual) || 0,
         reportSubmissionTime: now,
         comments: comments || null,
@@ -105,6 +109,24 @@ export async function POST(req: NextRequest) {
               amount: Number(ret.amount) || 0,
               reason: ret.reason || null,
               comments: ret.comments || null,
+            },
+          });
+        }
+      }
+
+      // Create delivery stops from assignment orders
+      const orders = await tx.order.findMany({
+        where: { assignmentId },
+        select: { id: true, deliveryStop: { select: { id: true } } },
+      });
+
+      for (const order of orders) {
+        if (!order.deliveryStop) {
+          await tx.deliveryStop.create({
+            data: {
+              orderId: order.id,
+              driverShiftId,
+              status: "DELIVERED",
             },
           });
         }

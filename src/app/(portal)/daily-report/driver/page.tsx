@@ -18,6 +18,8 @@ import {
   Box,
   LogIn,
   LogOut,
+  Fuel,
+  Gauge,
 } from "lucide-react";
 
 interface Sku {
@@ -51,6 +53,8 @@ interface Assignment {
     gatePassTime: string | null;
     shiftEnd: string | null;
     customerCountActual: number;
+    fuelCost: number | null;
+    mileageCovered: number | null;
     comments: string | null;
     returns: {
       skuId: string;
@@ -94,6 +98,8 @@ export default function DriverReportPage() {
 
   // KPI
   const [customerCountActual, setCustomerCountActual] = useState(0);
+  const [fuelCost, setFuelCost] = useState("");
+  const [mileageCovered, setMileageCovered] = useState("");
 
   // Returns
   const [returns, setReturns] = useState<Return[]>([]);
@@ -131,6 +137,8 @@ export default function DriverReportPage() {
           setGatePassTime(dateTimeToTime(s.gatePassTime));
           setShiftEnd(dateTimeToTime(s.shiftEnd));
           setCustomerCountActual(s.customerCountActual || 0);
+          setFuelCost(s.fuelCost != null ? String(s.fuelCost) : "");
+          setMileageCovered(s.mileageCovered != null ? String(s.mileageCovered) : "");
           setComments(s.comments || "");
 
           if (s.returns && s.returns.length > 0) {
@@ -224,17 +232,19 @@ export default function DriverReportPage() {
       const res = await fetch("/api/daily-report/driver", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          assignmentId: assignment.id,
-          loadingStart: timeToDateTime(loadingStart),
-          loadingEnd: timeToDateTime(loadingEnd),
-          shiftStart: timeToDateTime(shiftStart),
-          gatePassTime: timeToDateTime(gatePassTime),
-          shiftEnd: timeToDateTime(shiftEnd),
-          customerCountActual,
-          comments,
-          returns,
-        }),
+          body: JSON.stringify({
+            assignmentId: assignment.id,
+            loadingStart: timeToDateTime(loadingStart),
+            loadingEnd: timeToDateTime(loadingEnd),
+            shiftStart: timeToDateTime(shiftStart),
+            gatePassTime: timeToDateTime(gatePassTime),
+            shiftEnd: timeToDateTime(shiftEnd),
+            fuelCost: fuelCost ? Number(fuelCost) : null,
+            mileageCovered: mileageCovered ? Number(mileageCovered) : null,
+            customerCountActual,
+            comments,
+            returns,
+          }),
       });
 
       const data = await res.json();
@@ -395,16 +405,48 @@ export default function DriverReportPage() {
             <Users className="text-teal-600" size={18} />
             <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">Key Performance Indicator</h2>
           </div>
-          <div className="max-w-xs">
-            <label className="form-label">Customer Count Actual</label>
-            <input
-              type="number"
-              min={0}
-              value={customerCountActual || ""}
-              onChange={(e) => setCustomerCountActual(Number(e.target.value))}
-              className="form-input"
-              placeholder="0"
-            />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="form-label">Customer Count Actual</label>
+              <input
+                type="number"
+                min={0}
+                value={customerCountActual || ""}
+                onChange={(e) => setCustomerCountActual(Number(e.target.value))}
+                className="form-input"
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label className="form-label">
+                <Fuel size={12} className="inline mr-1" />
+                Fuel Cost (KES)
+              </label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                value={fuelCost}
+                onChange={(e) => setFuelCost(e.target.value)}
+                className="form-input"
+                placeholder="e.g. 5000"
+              />
+            </div>
+            <div>
+              <label className="form-label">
+                <Gauge size={12} className="inline mr-1" />
+                Mileage Covered (km)
+              </label>
+              <input
+                type="number"
+                min={0}
+                step="0.1"
+                value={mileageCovered}
+                onChange={(e) => setMileageCovered(e.target.value)}
+                className="form-input"
+                placeholder="e.g. 120"
+              />
+            </div>
           </div>
         </div>
 

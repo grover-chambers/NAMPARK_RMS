@@ -418,7 +418,7 @@ function CatalogSettings() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ name: "", category: "Flour", unitPrice: "", unitType: "piece", packSize: "" });
+  const [form, setForm] = useState({ name: "", category: "Flour", unitPrice: "", unitType: "piece", packSize: "", unitWeightKg: "", costPrice: "", listSellingPrice: "" });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
 
@@ -446,12 +446,18 @@ function CatalogSettings() {
       const res = await fetch("/api/sku", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, unitPrice: Number(form.unitPrice) }),
+        body: JSON.stringify({
+          ...form,
+          unitPrice: Number(form.unitPrice),
+          unitWeightKg: form.unitWeightKg ? Number(form.unitWeightKg) : null,
+          costPrice: form.costPrice ? Number(form.costPrice) : null,
+          listSellingPrice: form.listSellingPrice ? Number(form.listSellingPrice) : null,
+        }),
       });
       const data = await res.json();
       if (data.id) {
         setMsg({ type: "ok", text: `"${form.name}" added!` });
-        setForm({ name: "", category: "Flour", unitPrice: "", unitType: "piece", packSize: "" });
+        setForm({ name: "", category: "Flour", unitPrice: "", unitType: "piece", packSize: "", unitWeightKg: "", costPrice: "", listSellingPrice: "" });
         fetchSkus();
       } else {
         setMsg({ type: "err", text: data.error || "Failed" });
@@ -482,20 +488,28 @@ function CatalogSettings() {
               <th className="table-header">Price</th>
               <th className="table-header">Type</th>
               <th className="table-header">Pack Size</th>
+              <th className="table-header text-right">Wt (kg)</th>
+              <th className="table-header text-right">Cost (KES)</th>
+              <th className="table-header text-right">Sell (KES)</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin text-teal-600 mx-auto" /></td></tr>
+              <tr><td colSpan={8} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin text-teal-600 mx-auto" /></td></tr>
+            ) : filtered.length === 0 ? (
+              <tr><td colSpan={8} className="text-center py-8 text-slate-400 text-sm">No products match your search</td></tr>
             ) : (
               filtered.map((s: any) => (
-                <tr key={s.id} className="border-b border-slate-50 hover:bg-slate-50/50">
-                  <td className="table-cell font-medium">{s.name}</td>
-                  <td className="table-cell"><span className="badge-neutral">{s.category || "—"}</span></td>
-                  <td className="table-cell font-medium">{fmt(s.unitPrice)}</td>
-                  <td className="table-cell text-xs capitalize">{s.unitType}</td>
-                  <td className="table-cell text-xs">{s.packSize || "—"}</td>
-                </tr>
+                  <tr key={s.id} className="border-b border-slate-50 hover:bg-slate-50/50">
+                    <td className="table-cell font-medium">{s.name}</td>
+                    <td className="table-cell"><span className="badge-neutral">{s.category || "—"}</span></td>
+                    <td className="table-cell font-medium">{fmt(s.unitPrice)}</td>
+                    <td className="table-cell text-xs capitalize">{s.unitType}</td>
+                    <td className="table-cell text-xs">{s.packSize || "—"}</td>
+                    <td className="table-cell text-right text-xs">{s.unitWeightKg != null ? s.unitWeightKg : <span className="text-slate-300">—</span>}</td>
+                    <td className="table-cell text-right text-xs">{s.costPrice != null ? fmt(s.costPrice) : <span className="text-slate-300">—</span>}</td>
+                    <td className="table-cell text-right text-xs">{s.listSellingPrice != null ? fmt(s.listSellingPrice) : <span className="text-slate-300">—</span>}</td>
+                  </tr>
               ))
             )}
           </tbody>
@@ -537,6 +551,21 @@ function CatalogSettings() {
             <div>
               <label className="form-label">Pack Size</label>
               <input className="form-input" placeholder="2kg, 500ml..." value={form.packSize} onChange={(e) => setForm({ ...form, packSize: e.target.value })} />
+            </div>
+          </div>
+          <h4 className="text-xs font-semibold text-slate-500 uppercase tracking-wide pt-2">Pricing Data (for profitability)</h4>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="form-label">Unit Weight (kg)</label>
+              <input type="number" step="0.001" className="form-input" placeholder="e.g. 2" value={form.unitWeightKg} onChange={(e) => setForm({ ...form, unitWeightKg: e.target.value })} />
+            </div>
+            <div>
+              <label className="form-label">Cost Price (KES)</label>
+              <input type="number" step="0.01" className="form-input" placeholder="e.g. 1800" value={form.costPrice} onChange={(e) => setForm({ ...form, costPrice: e.target.value })} />
+            </div>
+            <div>
+              <label className="form-label">Selling Price (KES)</label>
+              <input type="number" step="0.01" className="form-input" placeholder="e.g. 2200" value={form.listSellingPrice} onChange={(e) => setForm({ ...form, listSellingPrice: e.target.value })} />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">

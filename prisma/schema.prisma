@@ -78,11 +78,12 @@ model Route {
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
 
-  assignments       DailyAssignment[]
-  missingItems      MissingItem[]
-  pricingSurveys    PricingSurvey[]
-  salesRepRoutes    SalesRepRoute[]
-  creditSales       CreditSale[]
+  assignments             DailyAssignment[]
+  missingItems            MissingItem[]
+  pricingSurveys          PricingSurvey[]
+  salesRepRoutes          SalesRepRoute[]
+  creditSales             CreditSale[]
+  weeklyProfitabilitySnapshots WeeklyProfitabilitySnapshot[]
 
   @@map("routes")
 }
@@ -124,10 +125,11 @@ model Driver {
 }
 
 model Vehicle {
-  id            String        @id @default(cuid())
-  registration  String        @unique
-  status        VehicleStatus @default(ACTIVE)
-  createdAt     DateTime      @default(now())
+  id                    String        @id @default(cuid())
+  registration          String        @unique
+  status                VehicleStatus @default(ACTIVE)
+  maintenanceRatePerKm  Float?
+  createdAt             DateTime      @default(now())
 
   assignments       DailyAssignment[]
   inspections       VehicleInspection[]
@@ -137,14 +139,17 @@ model Vehicle {
 }
 
 model SkuCatalog {
-  id          String    @id @default(cuid())
-  name        String
-  category    String?
-  unitPrice   Float
-  unitType    String    @default("piece")
-  packSize    String?
-  isActive    Boolean   @default(true)
-  createdAt   DateTime  @default(now())
+  id                String    @id @default(cuid())
+  name              String
+  category          String?
+  unitPrice         Float
+  unitType          String    @default("piece")
+  packSize          String?
+  unitWeightKg      Float?
+  costPrice         Float?
+  listSellingPrice  Float?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
 
   orderLines        OrderLine[]
   missingItems      MissingItem[]
@@ -210,6 +215,8 @@ model DriverShift {
   shiftStart          DateTime?
   gatePassTime        DateTime?
   shiftEnd            DateTime?
+  fuelCost            Float?
+  mileageCovered      Float?
   customerCountActual Int       @default(0)
   reportSubmissionTime DateTime?
   comments            String?
@@ -518,4 +525,25 @@ model AccountAlert {
   acknowledgedByCashier       User?          @relation("AlertCashier", fields: [acknowledgedByCashierId], references: [id])
 
   @@map("account_alerts")
+}
+
+model WeeklyProfitabilitySnapshot {
+  id                            String    @id @default(cuid())
+  routeId                       String
+  weekStart                     DateTime  @db.Date
+  tonnageDelivered              Float?
+  sales                         Float?
+  cogs                          Float?
+  fuelVehicleCost               Float?
+  returnsCost                   Float?
+  costOfSales                   Float?
+  profit                        Float?
+  missingItemsOpportunityCost   Float?
+  cogsStatus                    String    @default("pending_pricing") // "available" | "pending_pricing"
+  frozenAt                      DateTime  @default(now())
+
+  route                         Route     @relation(fields: [routeId], references: [id])
+
+  @@unique([routeId, weekStart])
+  @@map("weekly_profitability_snapshots")
 }

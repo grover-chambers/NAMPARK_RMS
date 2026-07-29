@@ -10,6 +10,13 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
+  DollarSign,
+  Package,
+  Truck,
+  RotateCcw,
+  FileX2,
+  PiggyBank,
+  Scale,
 } from "lucide-react";
 import {
   AreaChart,
@@ -60,6 +67,20 @@ interface PerformanceData {
   dailyTrend: DailyTrend[];
 }
 
+interface ProfitabilityRow {
+  routeId: string;
+  routeName: string;
+  tonnageDelivered: number | null;
+  sales: number;
+  cogs: number | null;
+  returnsCost: number;
+  fuelVehicleCost: number;
+  missingItemsOpportunityCost: number;
+  costOfSales: number | null;
+  profit: number | null;
+  cogsStatus: "available" | "pending_pricing";
+}
+
 function getWeekStart(offset: number): string {
   const d = new Date();
   d.setDate(d.getDate() + offset * 7);
@@ -86,6 +107,8 @@ export default function PerformancePage() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<PerformanceData | null>(null);
+  const [profitability, setProfitability] = useState<ProfitabilityRow[]>([]);
+  const [loadingProfitability, setLoadingProfitability] = useState(true);
 
   const startDate = getWeekStart(weekOffset);
   const endDate = getWeekEnd(weekOffset);
@@ -110,6 +133,23 @@ export default function PerformancePage() {
     }
     fetchData();
   }, [startDate, endDate]);
+
+  useEffect(() => {
+    async function fetchProfitability() {
+      setLoadingProfitability(true);
+      try {
+        const res = await fetch(`/api/reports/profitability?weekStart=${startDate}`);
+        const json = await res.json();
+        if (Array.isArray(json)) setProfitability(json);
+        else setProfitability([]);
+      } catch {
+        setProfitability([]);
+      } finally {
+        setLoadingProfitability(false);
+      }
+    }
+    fetchProfitability();
+  }, [startDate]);
 
   const overall = data?.overall ?? {
     totalSales: 0,
@@ -321,6 +361,91 @@ export default function PerformancePage() {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Profitability Section */}
+      <div className="card p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <PiggyBank className="w-5 h-5 text-teal-600" />
+          <h2 className="font-serif font-bold text-slate-800">Profitability Analysis</h2>
+          <span className="text-xs text-slate-400 ml-auto">P = Sales − Cost of Sales</span>
+        </div>
+        {loadingProfitability ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="w-8 h-8 border-3 border-teal-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : profitability.length === 0 ? (
+          <p className="text-center text-slate-400 text-sm py-8">No profitability data for this period</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-200">
+                  <th className="table-header">Route</th>
+                  <th className="table-header text-right"><Package size={12} className="inline mr-1" />Tonnage</th>
+                  <th className="table-header text-right"><DollarSign size={12} className="inline mr-1" />Sales</th>
+                  <th className="table-header text-right"><Scale size={12} className="inline mr-1" />COGS</th>
+                  <th className="table-header text-right"><RotateCcw size={12} className="inline mr-1" />Returns</th>
+                  <th className="table-header text-right"><Truck size={12} className="inline mr-1" />Fuel & Vehicle</th>
+                  <th className="table-header text-right"><FileX2 size={12} className="inline mr-1" />Missing</th>
+                  <th className="table-header text-right">Cost of Sales</th>
+                  <th className="table-header text-right"><TrendingUp size={12} className="inline mr-1" />Profit</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {profitability.map((row) => {
+                  const hasPricing = row.cogsStatus === "available";
+                  return (
+                    <tr key={row.routeId} className="hover:bg-slate-50/50">
+                      <td className="table-cell font-medium">{row.routeName}</td>
+                      <td className="table-cell text-right">
+                        {row.tonnageDelivered != null ? `${row.tonnageDelivered.toFixed(2)} t` : <span className="text-slate-400 text-xs">—</span>}
+                      </td>
+                      <td className="table-cell text-right font-medium">
+                        {row.sales > 0 ? `KES ${row.sales.toLocaleString()}` : <span className="text-slate-400">—</span>}
+                      </td>
+                      <td className="table-cell text-right">
+                        {hasPricing && row.cogs != null
+                          ? `KES ${row.cogs.toLocaleString()}`
+                          : <span className="text-amber-500 text-xs italic">Pending pricing</span>}
+                      </td>
+                      <td className="table-cell text-right">
+                        {row.returnsCost > 0 ? `KES ${row.returnsCost.toLocaleString()}` : <span className="text-slate-400">0</span>}
+                      </td>
+                      <td className="table-cell text-right">
+                        {row.fuelVehicleCost > 0 ? `KES ${row.fuelVehicleCost.toLocaleString()}` : <span className="text-slate-400">0</span>}
+                      </td>
+                      <td className="table-cell text-right">
+                        {row.missingItemsOpportunityCost > 0
+                          ? `KES ${row.missingItemsOpportunityCost.toLocaleString()}`
+                          : <span className="text-slate-400">0</span>}
+                      </td>
+                      <td className="table-cell text-right font-medium">
+                        {hasPricing && row.costOfSales != null
+                          ? `KES ${row.costOfSales.toLocaleString()}`
+                          : <span className="text-amber-500 text-xs italic">Pending pricing</span>}
+                      </td>
+                      <td className="table-cell text-right">
+                        {hasPricing && row.profit != null ? (
+                          <span className={row.profit >= 0 ? "text-green-600 font-bold" : "text-red-600 font-bold"}>
+                            {row.profit >= 0 ? "+" : ""}KES {row.profit.toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="text-amber-500 text-xs italic">Pending pricing</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        {profitability.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-6 text-xs text-slate-500">
+            <p><span className="font-medium text-slate-700">Note:</span> Sales = tonnage &times; KES 130,000/t. Returns &amp; missing items valued at opportunity (selling) cost.</p>
+          </div>
+        )}
       </div>
     </div>
   );

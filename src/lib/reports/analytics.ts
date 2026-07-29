@@ -305,3 +305,139 @@ export function computeInventoryStats(counts: InventoryCountData[]): InventorySt
     byStore,
   };
 }
+
+export interface ProfitabilityOrderLine {
+  quantity: number;
+  sku: {
+    unitWeightKg: number | null;
+    costPrice: number | null;
+    listSellingPrice: number | null;
+  } | null;
+}
+
+export interface ProfitabilityOrder {
+  lines: ProfitabilityOrderLine[];
+}
+
+export interface ProfitabilityDriverShift {
+  fuelCost: number | null;
+  mileageCovered: number | null;
+  driver: {
+    vehicle: { maintenanceRatePerKm: number | null } | null;
+  } | null;
+}
+
+export interface ProfitabilityInput {
+  routeId: string;
+  routeName: string;
+  weekStart: string;
+  orders: ProfitabilityOrder[];
+  driverShifts: ProfitabilityDriverShift[];
+  returnsTotal: number;
+  missingItemsTotal: number;
+}
+
+export interface ProfitabilityResult {
+  routeId: string;
+  routeName: string;
+  weekStart: string;
+  tonnageDelivered: number | null;
+  sales: number;
+  cogs: number | null;
+  returnsCost: number;
+  fuelVehicleCost: number;
+  missingItemsOpportunityCost: number;
+  costOfSales: number | null;
+  profit: number | null;
+  cogsStatus: "available" | "pending_pricing";
+}
+
+const SELLING_PRICE_PER_TONNE = 130000;
+
+export function computeProfitability(input: ProfitabilityInput): ProfitabilityResult {
+  const { orders, driverShifts, returnsTotal, missingItemsTotal } = input;
+
+  // Tonnage = SUM(order_lines.qty * sku.unitWeightKg) / 1000
+  let totalWeightKg = 0;
+  let hasMissingWeight = false;
+
+  for (const order of orders) {
+    for (const line of order.lines) {
+      if (line.sku?.unitWeightKg != null) {
+        totalWeightKg += line.quantity * line.sku.unitWeightKg;
+      } else {
+        hasMissingWeight = true;
+      }
+    }
+  }
+
+  const tonnageDelivered = hasMissingWeight ? null : totalWeightKg / 1000;
+
+  // Sales = tonnage × 130,000 (or from actual order amounts fallback)
+  const sales = tonnageDelivered != null
+    ? Math.round(tonnageDelivered * SELLING_PRICE_PER_TONNE)
+    : 0;
+
+  // COGS = SUM(order_lines.qty * sku.costPrice)
+  let totalCogs = 0;
+  let hasMissingCostPrice = false;
+
+  for (const order of orders) {
+    for (const line of order.lines) {
+      if (line.sku?.costPrice != null) {
+        totalCogs += line.quantity * line.sku.costPrice;
+      } else {
+        hasMissingCostPrice = true;
+      }
+    }
+  }
+
+  const cogsStatus: "available" | "pending_pricing" =
+    hasMissingWeight || hasMissingCostPrice ? "pending_pricing" : "available";
+
+  const cogs = cogsStatus === "available" ? Math.round(totalCogs) : null;
+
+  // Returns cost at selling price (opportunity cost) — already in return.amount
+  const returnsCost = Math.round(returnsTotal);
+
+  // Fuel & Vehicle Cost
+  let fuelVehicleCost = 0;
+  for (const shift of driverShifts) {
+    if (shift.fuelCost != null) {
+      fuelVehicleCost += shift.fuelCost;
+    }
+    const maintRate = shift.driver?.vehicle?.maintenanceRatePerKm;
+    if (maintRate != null && shift.mileageCovered != null) {
+      fuelVehicleCost += shift.mileageCovered * maintRate;
+    }
+  }
+  fuelVehicleCost = Math.round(fuelVehicleCost);
+
+  // Missing items opportunity cost
+  const missingItemsOpportunityCost = Math.round(missingItemsTotal);
+
+  // Cost of Sales
+  const costOfSales = cogs != null
+    ? Math.round(cogs + returnsCost + fuelVehicleCost + missingItemsOpportunityCost)
+    : null;
+
+  // Profit
+  const profit = (cogs != null && sales > 0)
+    ? Math.round(sales - costOfSales!)
+    : null;
+
+  return {
+    routeId: input.routeId,
+    routeName: input.routeName,
+    weekStart: input.weekStart,
+    tonnageDelivered: tonnageDelivered != null ? Math.round(tonnageDelivered * 1000) / 1000 : null,
+    sales: Math.round(sales),
+    cogs,
+    returnsCost,
+    fuelVehicleCost,
+    missingItemsOpportunityCost,
+    costOfSales,
+    profit,
+    cogsStatus,
+  };
+}
