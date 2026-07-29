@@ -1,0 +1,549 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  ADMIN
+  SUPERVISOR
+  SALES_REP
+  DRIVER
+  CASHIER
+}
+
+enum VehicleStatus {
+  ACTIVE
+  IN_GARAGE
+  MAINTENANCE
+  RETIRED
+}
+
+enum InspectionType {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum ReturnReason {
+  WRONG_ITEM
+  MISSING_ITEM
+  CANCELLED_ORDER
+  DAMAGED
+  EXPIRED
+}
+
+enum DeliveryStatus {
+  DELIVERED
+  PARTIAL
+  FAILED
+}
+
+enum AssignmentStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  password      String
+  role          UserRole
+  phone         String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  salesRep      SalesRep?
+  driver        Driver?
+
+  blockedBlockEvents    AccountBlockEvent[]   @relation("BlockEventCashier")
+  reviewedRequests      AccountUnblockRequest[] @relation("ReviewRequestCashier")
+  acknowledgedAlerts    AccountAlert[]        @relation("AlertCashier")
+  requestedUnblockReqs  AccountUnblockRequest[] @relation("RequestByRep")
+
+  @@map("users")
+}
+
+model Route {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  mileageBefore Float     @default(0)
+  mileageAfter  Float     @default(0)
+  targetDaily   Float     @default(0)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+
+  assignments             DailyAssignment[]
+  missingItems            MissingItem[]
+  pricingSurveys          PricingSurvey[]
+  salesRepRoutes          SalesRepRoute[]
+  creditSales             CreditSale[]
+  weeklyProfitabilitySnapshots WeeklyProfitabilitySnapshot[]
+
+  @@map("routes")
+}
+
+model SalesRep {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  name      String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  assignments       DailyAssignment[]
+  pricingSurveys    PricingSurvey[]
+  routes            SalesRepRoute[]
+  cashierAccount    CashierAccount?
+
+  @@map("sales_reps")
+}
+
+model SalesRepRoute {
+  id          String  @id @default(cuid())
+  salesRepId  String
+  routeId     String
+  salesRep    SalesRep @relation(fields: [salesRepId], references: [id], onDelete: Cascade)
+  route       Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+  @@unique([salesRepId, routeId])
+  @@map("sales_rep_routes")
+}
+
+model Driver {
+  id        String    @id @default(cuid())
+  userId    String    @unique
+  name      String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  assignments       DailyAssignment[]
+
+  @@map("drivers")
+}
+
+model Vehicle {
+  id                    String        @id @default(cuid())
+  registration          String        @unique
+  status                VehicleStatus @default(ACTIVE)
+  maintenanceRatePerKm  Float?
+  createdAt             DateTime      @default(now())
+
+  assignments       DailyAssignment[]
+  inspections       VehicleInspection[]
+  fleetDaily        FleetDaily[]
+
+  @@map("vehicles")
+}
+
+model SkuCatalog {
+  id                String    @id @default(cuid())
+  name              String
+  category          String?
+  unitPrice         Float
+  unitType          String    @default("piece")
+  packSize          String?
+  unitWeightKg      Float?
+  costPrice         Float?
+  listSellingPrice  Float?
+  isActive          Boolean   @default(true)
+  createdAt         DateTime  @default(now())
+
+  orderLines        OrderLine[]
+  missingItems      MissingItem[]
+  returns           Return[]
+  pricingSurveys    PricingSurvey[]
+  inventoryCounts   InventoryCount[]
+
+  @@map("sku_catalog")
+}
+
+model DailyAssignment {
+  id            String          @id @default(cuid())
+  date          DateTime        @db.Date
+  routeId       String
+  salesRepId    String
+  driverId      String
+  vehicleId     String
+  status        AssignmentStatus @default(PENDING)
+  createdAt     DateTime        @default(now())
+
+  route         Route           @relation(fields: [routeId], references: [id])
+  salesRep      SalesRep        @relation(fields: [salesRepId], references: [id])
+  driver        Driver          @relation(fields: [driverId], references: [id])
+  vehicle       Vehicle         @relation(fields: [vehicleId], references: [id])
+
+  salesRepShift SalesRepShift?
+  driverShift   DriverShift?
+  orders        Order[]
+  missingItems  MissingItem[]
+
+  @@unique([date, routeId])
+  @@map("daily_assignments")
+}
+
+model SalesRepShift {
+  id                    String    @id @default(cuid())
+  assignmentId          String    @unique
+  shiftOpen             DateTime?
+  shiftClose            DateTime?
+  customerCountTarget   Int       @default(0)
+  customerCountActual   Int       @default(0)
+  salesTarget           Float     @default(0)
+  salesActual           Float     @default(0)
+  complaints            Int       @default(0)
+  complaintTarget       Int       @default(0)
+  reportSubmissionTime  DateTime?
+  comments              String?
+  kpiReasons            Json      @default("{}")
+  createdAt             DateTime  @default(now())
+
+  assignment            DailyAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  @@map("sales_rep_shifts")
+}
+
+model DriverShift {
+  id                  String    @id @default(cuid())
+  assignmentId        String    @unique
+  loadingStart        DateTime?
+  loadingEnd          DateTime?
+  loadingStartTarget  DateTime?
+  loadingEndTarget    DateTime?
+  shiftStart          DateTime?
+  gatePassTime        DateTime?
+  shiftEnd            DateTime?
+  fuelCost            Float?
+  mileageCovered      Float?
+  customerCountActual Int       @default(0)
+  reportSubmissionTime DateTime?
+  comments            String?
+  createdAt           DateTime  @default(now())
+
+  assignment          DailyAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  deliveryStops       DeliveryStop[]
+  returns             Return[]
+
+  @@map("driver_shifts")
+}
+
+model Order {
+  id            String    @id @default(cuid())
+  assignmentId  String
+  customerName  String
+  totalAmount   Float     @default(0)
+  createdAt     DateTime  @default(now())
+
+  assignment    DailyAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  lines         OrderLine[]
+  deliveryStop  DeliveryStop?
+
+  @@map("orders")
+}
+
+model OrderLine {
+  id        String    @id @default(cuid())
+  orderId   String
+  skuId     String
+  quantity  Int       @default(0)
+  unitPrice Float
+  amount    Float     @default(0)
+
+  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  sku       SkuCatalog @relation(fields: [skuId], references: [id])
+
+  @@map("order_lines")
+}
+
+model DeliveryStop {
+  id          String          @id @default(cuid())
+  orderId     String          @unique
+  driverShiftId String
+  status      DeliveryStatus  @default(DELIVERED)
+  reason      String?
+  timestamp   DateTime        @default(now())
+
+  order       Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  driverShift DriverShift     @relation(fields: [driverShiftId], references: [id], onDelete: Cascade)
+
+  @@map("delivery_stops")
+}
+
+model MissingItem {
+  id                    String    @id @default(cuid())
+  assignmentId          String
+  skuId                 String
+  routeId               String
+  date                  DateTime  @db.Date
+  week                  String?
+  customerCountAffected Int       @default(0)
+  cartonsAffected       Int       @default(0)
+  unitPrice             Float?
+  amount                Float?
+  alternativeAvailable  Boolean   @default(false)
+  alternativeProduct    String?
+  isTrueStockout        Boolean   @default(false)
+  notes                 String?
+  createdAt             DateTime  @default(now())
+
+  assignment            DailyAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  sku                   SkuCatalog @relation(fields: [skuId], references: [id])
+  route                 Route     @relation(fields: [routeId], references: [id])
+
+  @@map("missing_items")
+}
+
+model Return {
+  id              String        @id @default(cuid())
+  driverShiftId   String
+  skuId           String
+  type            ReturnReason
+  quantity        Int           @default(0)
+  price           Float         @default(0)
+  amount          Float         @default(0)
+  reason          String?
+  comments        String?
+  createdAt       DateTime      @default(now())
+
+  driverShift     DriverShift   @relation(fields: [driverShiftId], references: [id], onDelete: Cascade)
+  sku             SkuCatalog    @relation(fields: [skuId], references: [id])
+
+  @@map("returns")
+}
+
+model FleetDaily {
+  id                  String    @id @default(cuid())
+  date                DateTime  @db.Date
+  vehicleId           String
+  expectedAvailable   Int       @default(0)
+  actualAvailable     Int       @default(0)
+  inGarage            Int       @default(0)
+  garageReason        String?
+  workshopTat         String?
+  theftReport         Int       @default(0)
+  theftReason         String?
+  preDispatchInspection Boolean @default(false)
+  inspectionReason    String?
+  createdAt           DateTime  @default(now())
+
+  vehicle             Vehicle   @relation(fields: [vehicleId], references: [id])
+
+  @@unique([date, vehicleId])
+  @@map("fleet_daily")
+}
+
+model VehicleInspection {
+  id          String        @id @default(cuid())
+  vehicleId   String
+  date        DateTime      @db.Date
+  type        InspectionType
+  item        String
+  status      String?
+  reason      String?
+  createdAt   DateTime      @default(now())
+
+  vehicle     Vehicle       @relation(fields: [vehicleId], references: [id])
+
+  @@map("vehicle_inspections")
+}
+
+model PricingSurvey {
+  id                String    @id @default(cuid())
+  date              DateTime  @db.Date
+  routeId           String
+  salesRepId        String
+  skuId             String
+  competitorName    String?
+  competitorPrice   Float
+  khelPrice         Float
+  difference        Float     @default(0)
+  createdAt         DateTime  @default(now())
+
+  route             Route     @relation(fields: [routeId], references: [id])
+  salesRep          SalesRep  @relation(fields: [salesRepId], references: [id])
+  sku               SkuCatalog @relation(fields: [skuId], references: [id])
+
+  @@map("pricing_surveys")
+}
+
+model Challenge {
+  id          String    @id @default(cuid())
+  date        DateTime  @default(now())
+  gap         String
+  whatAction  String?
+  who         String?
+  when        DateTime?
+  resolved    Boolean   @default(false)
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@map("challenges")
+}
+
+model InventoryCount {
+  id              String    @id @default(cuid())
+  store           String
+  countDate       DateTime  @db.Date
+  skuId           String
+  category        String?
+  physicalQty     Int       @default(0)
+  systemQty       Int       @default(0)
+  variance        Int       @default(0)
+  unitPrice       Float     @default(0)
+  stockValue      Float     @default(0)
+  lastStocked     DateTime?
+  expiryDate      DateTime?
+  notes           String?
+  createdAt       DateTime  @default(now())
+
+  sku             SkuCatalog @relation(fields: [skuId], references: [id])
+
+  @@map("inventory_counts")
+}
+
+model ShareToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  reportType  String
+  params      Json
+  createdBy   String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@map("share_tokens")
+}
+
+model CashierAccount {
+  id                      String    @id @default(cuid())
+  repId                   String    @unique
+  status                  String    @default("open") // 'open' | 'blocked'
+  currentBalance          Float     @default(0)
+  creditReferenceAmount   Float     @default(0)
+  autoBlockThresholdPct   Float     @default(25)
+  lastOpenedAt            DateTime?
+  lastBlockedAt           DateTime?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  rep                     SalesRep  @relation(fields: [repId], references: [id], onDelete: Cascade)
+  creditSales             CreditSale[]
+  blockEvents             AccountBlockEvent[]
+  unblockRequests         AccountUnblockRequest[]
+  openLogs                AccountOpenLog[]
+  alerts                  AccountAlert[]
+
+  @@map("cashier_accounts")
+}
+
+model CreditSale {
+  id              String    @id @default(cuid())
+  accountId       String
+  retailerName    String
+  routeId         String
+  amount          Float
+  incurredDate    DateTime  @db.Date
+  settled         Boolean   @default(false)
+  settledDate     DateTime?
+  settledAmount   Float?
+  createdAt       DateTime  @default(now())
+
+  account         CashierAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  route           Route          @relation(fields: [routeId], references: [id])
+  blockEvents     AccountBlockEvent[]
+
+  @@map("credit_sales")
+}
+
+model AccountBlockEvent {
+  id                    String    @id @default(cuid())
+  accountId             String
+  blockedAt             DateTime  @default(now())
+  blockType             String    // 'manual' | 'auto'
+  blockedByCashierId    String?
+  reason                String?
+  balanceAtTrigger      Float?
+  pctAtTrigger          Float?
+  relatedCreditSaleId   String?
+  unblockedAt           DateTime?
+  unblockReason         String?   // 'debt_settled' | 'cashier_override'
+
+  account               CashierAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  blockedByCashier      User?          @relation("BlockEventCashier", fields: [blockedByCashierId], references: [id])
+  relatedCreditSale     CreditSale?    @relation(fields: [relatedCreditSaleId], references: [id])
+
+  @@map("account_block_events")
+}
+
+model AccountUnblockRequest {
+  id                    String    @id @default(cuid())
+  accountId             String
+  requestedByRepId      String
+  requestedAt           DateTime  @default(now())
+  routeOrRetailerRef    String
+  amount                Float
+  justification         String
+  status                String    @default("pending") // 'pending' | 'approved' | 'rejected'
+  reviewedByCashierId   String?
+  reviewedAt            DateTime?
+  letterPdfUrl          String?
+
+  account               CashierAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  requestedByRep        User           @relation("RequestByRep", fields: [requestedByRepId], references: [id])
+  reviewedByCashier     User?          @relation("ReviewRequestCashier", fields: [reviewedByCashierId], references: [id])
+
+  @@map("account_unblock_requests")
+}
+
+model AccountOpenLog {
+  id                    String    @id @default(cuid())
+  accountId             String
+  logDate               DateTime  @db.Date
+  scheduledOpenTime     DateTime?
+  actualOpenTime        DateTime?
+  delayMinutes          Float     @default(0)
+  createdAt             DateTime  @default(now())
+
+  account               CashierAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@map("account_open_log")
+}
+
+model AccountAlert {
+  id                          String    @id @default(cuid())
+  accountId                   String
+  alertType                   String    @default("auto_block")
+  triggeredAt                 DateTime  @default(now())
+  balanceAtTrigger            Float?
+  pctAtTrigger                Float?
+  acknowledged                Boolean   @default(false)
+  acknowledgedByCashierId     String?
+  acknowledgedAt              DateTime?
+
+  account                     CashierAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  acknowledgedByCashier       User?          @relation("AlertCashier", fields: [acknowledgedByCashierId], references: [id])
+
+  @@map("account_alerts")
+}
+
+model WeeklyProfitabilitySnapshot {
+  id                            String    @id @default(cuid())
+  routeId                       String
+  weekStart                     DateTime  @db.Date
+  tonnageDelivered              Float?
+  sales                         Float?
+  cogs                          Float?
+  fuelVehicleCost               Float?
+  returnsCost                   Float?
+  costOfSales                   Float?
+  profit                        Float?
+  missingItemsOpportunityCost   Float?
+  cogsStatus                    String    @default("pending_pricing") // "available" | "pending_pricing"
+  frozenAt                      DateTime  @default(now())
+
+  route                         Route     @relation(fields: [routeId], references: [id])
+
+  @@unique([routeId, weekStart])
+  @@map("weekly_profitability_snapshots")
+}
