@@ -24,6 +24,8 @@ export interface RouteReportData {
   shift: {
     shiftOpen: string | null;
     shiftClose: string | null;
+    shiftOpenTarget: string | null;
+    shiftCloseTarget: string | null;
     customerCountTarget: number;
     customerCountActual: number;
     salesTarget: number;
@@ -176,12 +178,12 @@ export function computeReport(report: RouteReportData): ComputedReport {
     {
       label: "Shift Open",
       actual: shift.shiftOpen,
-      status: earlyLate(null, shift.shiftOpen),
+      status: earlyLate(shift.shiftOpenTarget, shift.shiftOpen),
     },
     {
       label: "Shift Close",
       actual: shift.shiftClose,
-      status: earlyLate(null, shift.shiftClose),
+      status: earlyLate(shift.shiftCloseTarget, shift.shiftClose),
     },
   ];
 
@@ -353,6 +355,10 @@ export interface ProfitabilityResult {
 }
 
 const SELLING_PRICE_PER_TONNE = 130000;
+export const PROFITABILITY_CONFIG = {
+  sellingPricePerTonne: SELLING_PRICE_PER_TONNE,
+  vehicleCostPerKm: 150,
+} as const;
 
 export function computeProfitability(input: ProfitabilityInput): ProfitabilityResult {
   const { orders, driverShifts, returnsTotal, missingItemsTotal } = input;

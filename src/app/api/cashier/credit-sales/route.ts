@@ -79,21 +79,25 @@ export async function GET(req: NextRequest) {
   const role = requireRole(session, "CASHIER");
   if (!role) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { searchParams } = new URL(req.url);
-  const accountId = searchParams.get("accountId");
-  const settled = searchParams.get("settled");
+  try {
+    const { searchParams } = new URL(req.url);
+    const accountId = searchParams.get("accountId");
+    const settled = searchParams.get("settled");
 
-  const where: any = {};
-  if (accountId) where.accountId = accountId;
-  if (settled !== null && settled !== undefined) where.settled = settled === "true";
+    const where: any = {};
+    if (accountId) where.accountId = accountId;
+    if (settled !== null && settled !== undefined) where.settled = settled === "true";
 
-  const sales = await prisma.creditSale.findMany({
-    where,
-    include: { route: { select: { name: true } }, account: { include: { rep: { select: { name: true } } } } },
-    orderBy: { incurredDate: "desc" },
-  });
+    const sales = await prisma.creditSale.findMany({
+      where,
+      include: { route: { select: { name: true } }, account: { include: { rep: { select: { name: true } } } } },
+      orderBy: { incurredDate: "desc" },
+    });
 
-  return NextResponse.json({ data: sales });
+    return NextResponse.json({ data: sales });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -101,32 +105,36 @@ export async function POST(req: NextRequest) {
   const role = requireRole(session, "CASHIER");
   if (!role) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const body = await req.json();
-  const { accountId, retailerName, routeId, amount, incurredDate } = body;
+  try {
+    const body = await req.json();
+    const { accountId, retailerName, routeId, amount, incurredDate } = body;
 
-  if (!accountId || !retailerName || !routeId || !amount) {
-    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    if (!accountId || !retailerName || !routeId || !amount) {
+      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+    }
+
+    const parsedAmount = parseFloat(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      return NextResponse.json({ error: "Amount must be a positive number" }, { status: 400 });
+    }
+
+    const account = await prisma.cashierAccount.findUnique({ where: { id: accountId } });
+    if (!account) return NextResponse.json({ error: "Account not found" }, { status: 404 });
+
+    const sale = await prisma.creditSale.create({
+      data: {
+        accountId,
+        retailerName,
+        routeId,
+        amount: parsedAmount,
+        incurredDate: incurredDate ? new Date(incurredDate) : new Date(),
+      },
+    });
+
+    await recomputeBalance(accountId);
+
+    return NextResponse.json({ data: sale }, { status: 201 });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
-
-  const parsedAmount = parseFloat(amount);
-  if (isNaN(parsedAmount) || parsedAmount <= 0) {
-    return NextResponse.json({ error: "Amount must be a positive number" }, { status: 400 });
-  }
-
-  const account = await prisma.cashierAccount.findUnique({ where: { id: accountId } });
-  if (!account) return NextResponse.json({ error: "Account not found" }, { status: 404 });
-
-  const sale = await prisma.creditSale.create({
-    data: {
-      accountId,
-      retailerName,
-      routeId,
-      amount: parsedAmount,
-      incurredDate: incurredDate ? new Date(incurredDate) : new Date(),
-    },
-  });
-
-  await recomputeBalance(accountId);
-
-  return NextResponse.json({ data: sale }, { status: 201 });
 }

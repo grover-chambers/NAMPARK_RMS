@@ -72,6 +72,7 @@ const repNavItems: NavItem[] = [
 const driverNavItems: NavItem[] = [
   { label: "My Dashboard", href: "/dashboard", icon: <LayoutDashboard size={18} />, roles: ["DRIVER"] },
   { label: "My Report", href: "/daily-report/driver", icon: <ClipboardList size={18} />, roles: ["DRIVER"] },
+  { label: "Deliveries", href: "/driver/deliveries", icon: <Truck size={18} />, roles: ["DRIVER"] },
   { label: "Returns", href: "/returns", icon: <RotateCcw size={18} />, roles: ["DRIVER"] },
 ];
 

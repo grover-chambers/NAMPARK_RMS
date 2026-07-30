@@ -93,6 +93,8 @@ export async function GET(request: NextRequest) {
         shift: {
           shiftOpen: shift?.shiftOpen?.toISOString() ?? null,
           shiftClose: shift?.shiftClose?.toISOString() ?? null,
+          shiftOpenTarget: shift?.shiftOpenTarget?.toISOString() ?? null,
+          shiftCloseTarget: shift?.shiftCloseTarget?.toISOString() ?? null,
           customerCountTarget,
           customerCountActual,
           salesTarget,

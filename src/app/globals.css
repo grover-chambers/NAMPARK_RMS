@@ -396,3 +396,29 @@ body {
   border-top: 1px solid #26312B;
   margin: 22px 0 14px;
 }
+
+/* Slide up animation */
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+/* Responsive table helpers */
+@media (max-width: 640px) {
+  .responsive-table {
+    font-size: 0.75rem;
+  }
+  .responsive-table th,
+  .responsive-table td {
+    padding: 0.5rem 0.5rem;
+  }
+}

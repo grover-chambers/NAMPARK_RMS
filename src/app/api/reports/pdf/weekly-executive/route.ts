@@ -55,6 +55,8 @@ export async function GET(request: NextRequest) {
         shift: {
           shiftOpen: shift?.shiftOpen?.toISOString() ?? null,
           shiftClose: shift?.shiftClose?.toISOString() ?? null,
+          shiftOpenTarget: shift?.shiftOpenTarget?.toISOString() ?? null,
+          shiftCloseTarget: shift?.shiftCloseTarget?.toISOString() ?? null,
           customerCountTarget: shift?.customerCountTarget ?? 0,
           customerCountActual: shift?.customerCountActual ?? 0,
           salesTarget: shift?.salesTarget ?? a.route.targetDaily,

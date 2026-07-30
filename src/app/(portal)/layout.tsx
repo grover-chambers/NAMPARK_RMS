@@ -5,13 +5,14 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import TopNav from "@/components/layout/TopNav";
+import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 
 const roleRoutePrefixes: Record<string, string[]> = {
-  ADMIN: ["/dashboard", "/weekly-summary", "/daily-report/view", "/daily-report/rep", "/daily-report/driver", "/assignments", "/routes", "/drivers", "/vehicles", "/performance", "/missing-items", "/returns", "/pricing", "/inventory", "/challenges", "/settings", "/profile"],
-  SUPERVISOR: ["/dashboard", "/weekly-summary", "/daily-report/view", "/assignments", "/performance", "/missing-items", "/returns", "/vehicles", "/profile"],
-  SALES_REP: ["/dashboard", "/daily-report/rep", "/missing-items", "/profile"],
-  DRIVER: ["/dashboard", "/daily-report/driver", "/returns", "/profile"],
-  CASHIER: ["/cashier", "/profile"],
+  ADMIN: ["/dashboard", "/weekly-summary", "/daily-report/view", "/daily-report/rep", "/daily-report/driver", "/assignments", "/routes", "/drivers", "/vehicles", "/performance", "/missing-items", "/returns", "/pricing", "/inventory", "/challenges", "/settings", "/profile", "/notifications", "/driver/deliveries"],
+  SUPERVISOR: ["/dashboard", "/weekly-summary", "/daily-report/view", "/assignments", "/performance", "/missing-items", "/returns", "/vehicles", "/profile", "/notifications"],
+  SALES_REP: ["/dashboard", "/daily-report/rep", "/missing-items", "/profile", "/notifications"],
+  DRIVER: ["/dashboard", "/daily-report/driver", "/returns", "/profile", "/notifications", "/driver/deliveries"],
+  CASHIER: ["/cashier", "/profile", "/notifications"],
 };
 
 function isRouteAllowedForRole(pathname: string, role: string): boolean {
@@ -114,9 +115,10 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
   return (
     <div className="flex min-h-screen bg-ivory-100">
       <Sidebar />
-      <div className={`flex-1 min-w-0 flex flex-col transition-all duration-300 ${sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-60"}`}>
+      <div className={`flex-1 min-w-0 flex flex-col transition-all duration-300 ${sidebarCollapsed ? "lg:ml-[68px]" : "lg:ml-60"} ml-0`}>
         <TopNav />
         <main className="flex-1 overflow-y-auto">{children}</main>
+        <PwaInstallPrompt />
       </div>
     </div>
   );

@@ -10,17 +10,21 @@ export async function GET(req: NextRequest) {
   const role = requireRole(session, "CASHIER");
   if (!role) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { searchParams } = new URL(req.url);
-  const accountId = searchParams.get("accountId");
+  try {
+    const { searchParams } = new URL(req.url);
+    const accountId = searchParams.get("accountId");
 
-  let query = `SELECT * FROM "v_account_route_breakdown"`;
-  const params: any[] = [];
-  if (accountId) {
-    query += ` WHERE "accountId" = $1`;
-    params.push(accountId);
+    let query = `SELECT * FROM "v_account_route_breakdown"`;
+    const params: any[] = [];
+    if (accountId) {
+      query += ` WHERE "accountId" = $1`;
+      params.push(accountId);
+    }
+    query += ` ORDER BY "totalOutstanding" DESC`;
+
+    const result = await prisma.$queryRawUnsafe(query, ...params);
+    return NextResponse.json({ data: result });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
-  query += ` ORDER BY "totalOutstanding" DESC`;
-
-  const result = await prisma.$queryRawUnsafe(query, ...params);
-  return NextResponse.json({ data: result });
 }

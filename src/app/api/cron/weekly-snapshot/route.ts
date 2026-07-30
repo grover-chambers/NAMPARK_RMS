@@ -102,6 +102,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // Compute profitability for each route
     const snapshot = {
       week: targetWeek,
       weekStart: weekStart.toISOString().split("T")[0],
@@ -115,17 +116,36 @@ export async function GET(req: NextRequest) {
       generatedAt: now.toISOString(),
     };
 
-    // Store as a challenge with the snapshot data
-    await prisma.challenge.create({
-      data: {
-        date: now,
-        gap: `Weekly snapshot for ${targetWeek}`,
-        whatAction: JSON.stringify(snapshot),
-        who: "SYSTEM",
-        when: weekStart,
-        resolved: true,
-      },
-    });
+    // Upsert into WeeklyProfitabilitySnapshot (one per route per week)
+    const routeIds = [...new Set(assignments.map(a => a.routeId))];
+    for (const routeId of routeIds) {
+      const routeAssignments = assignments.filter(a => a.routeId === routeId);
+      const routeSnapshot = routeBreakdown[routeAssignments[0]?.route?.name || "Unknown"];
+
+      await prisma.weeklyProfitabilitySnapshot.upsert({
+        where: {
+          routeId_weekStart: {
+            routeId,
+            weekStart: weekStart.toISOString().split("T")[0],
+          },
+        },
+        create: {
+          routeId,
+          weekStart: weekStart.toISOString().split("T")[0],
+          tonnageDelivered: 0,
+          sales: routeSnapshot?.sales || 0,
+          cogs: null,
+          returnsCost: 0,
+          costOfSales: null,
+          profit: null,
+          missingItemsOpportunityCost: 0,
+          cogsStatus: "pending_pricing",
+        },
+        update: {
+          sales: routeSnapshot?.sales || 0,
+        },
+      });
+    }
 
     return NextResponse.json({
       success: true,

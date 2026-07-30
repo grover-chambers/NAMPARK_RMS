@@ -52,21 +52,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const role = requireRole(session, "CASHIER");
   if (!role) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { id } = await params;
-  const sale = await prisma.creditSale.findUnique({ where: { id } });
-  if (!sale) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (sale.settled) return NextResponse.json({ error: "Already settled" }, { status: 400 });
+  try {
+    const { id } = await params;
+    const sale = await prisma.creditSale.findUnique({ where: { id } });
+    if (!sale) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (sale.settled) return NextResponse.json({ error: "Already settled" }, { status: 400 });
 
-  await prisma.creditSale.update({
-    where: { id },
-    data: {
-      settled: true,
-      settledDate: new Date(),
-      settledAmount: sale.amount,
-    },
-  });
+    await prisma.creditSale.update({
+      where: { id },
+      data: {
+        settled: true,
+        settledDate: new Date(),
+        settledAmount: sale.amount,
+      },
+    });
 
-  await recomputeBalance(sale.accountId);
+    await recomputeBalance(sale.accountId);
 
-  return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 }

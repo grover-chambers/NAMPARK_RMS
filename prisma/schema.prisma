@@ -181,6 +181,11 @@ model DailyAssignment {
   missingItems  MissingItem[]
 
   @@unique([date, routeId])
+  @@index([date])
+  @@index([salesRepId])
+  @@index([driverId])
+  @@index([vehicleId])
+  @@index([status])
   @@map("daily_assignments")
 }
 
@@ -189,6 +194,8 @@ model SalesRepShift {
   assignmentId          String    @unique
   shiftOpen             DateTime?
   shiftClose            DateTime?
+  shiftOpenTarget       DateTime?
+  shiftCloseTarget      DateTime?
   customerCountTarget   Int       @default(0)
   customerCountActual   Int       @default(0)
   salesTarget           Float     @default(0)
@@ -240,6 +247,8 @@ model Order {
   lines         OrderLine[]
   deliveryStop  DeliveryStop?
 
+  @@index([assignmentId])
+  @@index([customerName])
   @@map("orders")
 }
 
@@ -292,6 +301,9 @@ model MissingItem {
   sku                   SkuCatalog @relation(fields: [skuId], references: [id])
   route                 Route     @relation(fields: [routeId], references: [id])
 
+  @@index([date])
+  @@index([routeId])
+  @@index([week])
   @@map("missing_items")
 }
 
@@ -453,6 +465,8 @@ model CreditSale {
   route           Route          @relation(fields: [routeId], references: [id])
   blockEvents     AccountBlockEvent[]
 
+  @@index([accountId])
+  @@index([settled])
   @@map("credit_sales")
 }
 
@@ -473,6 +487,7 @@ model AccountBlockEvent {
   blockedByCashier      User?          @relation("BlockEventCashier", fields: [blockedByCashierId], references: [id])
   relatedCreditSale     CreditSale?    @relation(fields: [relatedCreditSaleId], references: [id])
 
+  @@index([accountId])
   @@map("account_block_events")
 }
 
@@ -493,6 +508,8 @@ model AccountUnblockRequest {
   requestedByRep        User           @relation("RequestByRep", fields: [requestedByRepId], references: [id])
   reviewedByCashier     User?          @relation("ReviewRequestCashier", fields: [reviewedByCashierId], references: [id])
 
+  @@index([accountId])
+  @@index([status])
   @@map("account_unblock_requests")
 }
 
@@ -507,6 +524,7 @@ model AccountOpenLog {
 
   account               CashierAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
+  @@index([accountId])
   @@map("account_open_log")
 }
 
@@ -524,6 +542,8 @@ model AccountAlert {
   account                     CashierAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   acknowledgedByCashier       User?          @relation("AlertCashier", fields: [acknowledgedByCashierId], references: [id])
 
+  @@index([accountId])
+  @@index([acknowledged])
   @@map("account_alerts")
 }
 
@@ -546,4 +566,35 @@ model WeeklyProfitabilitySnapshot {
 
   @@unique([routeId, weekStart])
   @@map("weekly_profitability_snapshots")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  type      String   // "account_blocked" | "unblock_approved" | "unblock_request" | "report_reminder" | "assignment_change" | "route_change" | "shift_change" | "weekly_report_ready" | "stockout_alert" | "message"
+  link      String?
+  read      Boolean  @default(false)
+  pushed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
+  @@index([type])
+  @@map("notifications")
+}
+
+model PushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  lastUsedAt DateTime @default(now())
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }

@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#065f46"/>
+      <stop offset="100%" stop-color="#047857"/>
+    </linearGradient>
+  </defs>
+  <rect width="192" height="192" rx="32" fill="url(#bg)"/>
+  <path d="M16 96 C16 50 50 16 96 16 C142 16 176 50 176 96 C176 142 142 176 96 176 C50 176 16 142 16 96Z" fill="none" stroke="#C9A227" stroke-width="1.5" opacity="0.3"/>
+  <path d="M24 96 C24 56 56 24 96 24 C136 24 168 56 168 96 C168 136 136 168 96 168 C56 168 24 136 24 96Z" fill="none" stroke="#C9A227" stroke-width="1" opacity="0.2"/>
+  <g transform="translate(96,88)">
+    <path d="M-32,-40 L0,0 L32,-40" fill="none" stroke="#C9A227" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M-28,-34 C-18,-20 -10,-10 0,0" fill="none" stroke="#C9A227" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+    <path d="M28,-34 C18,-20 10,-10 0,0" fill="none" stroke="#C9A227" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+    <path d="M-24,-28 L0,10 L24,-28" fill="none" stroke="#C9A227" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
+    <text x="0" y="32" text-anchor="middle" font-family="serif" font-size="16" font-weight="bold" fill="#C9A227" letter-spacing="3">KHEL</text>
+  </g>
+  <circle cx="96" cy="72" r="22" fill="none" stroke="#C9A227" stroke-width="2.5" opacity="0.7"/>
+  <text x="96" y="78" text-anchor="middle" font-family="serif" font-size="24" font-weight="bold" fill="#C9A227">K</text>
+</svg>

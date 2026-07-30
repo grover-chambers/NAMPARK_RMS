@@ -10,6 +10,10 @@ export async function GET(req: NextRequest) {
   const role = requireRole(session, "CASHIER");
   if (!role) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const result = await prisma.$queryRawUnsafe(`SELECT * FROM "v_account_blocked_cost" ORDER BY "logDate" DESC`);
-  return NextResponse.json({ data: result });
+  try {
+    const result = await prisma.$queryRawUnsafe(`SELECT * FROM "v_account_blocked_cost" ORDER BY "logDate" DESC`);
+    return NextResponse.json({ data: result });
+  } catch (error: any) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
 }
