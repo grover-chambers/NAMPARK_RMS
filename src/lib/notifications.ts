@@ -11,6 +11,11 @@ interface CreateNotificationInput {
 }
 
 export async function createNotification(input: CreateNotificationInput) {
+  const pref = await prisma.notificationPreference.findUnique({
+    where: { userId_type: { userId: input.userId, type: input.type } },
+  });
+  if (pref && !pref.enabled) return null;
+
   const notification = await prisma.notification.create({
     data: {
       userId: input.userId,
@@ -37,8 +42,15 @@ export async function createNotificationForRole(
     select: { id: true },
   });
 
+  const prefs = await prisma.notificationPreference.findMany({
+    where: { userId: { in: users.map((u) => u.id) }, type: input.type, enabled: false },
+  });
+  const optedOut = new Set(prefs.map((p) => p.userId));
+
   const notifications = [];
   for (const user of users) {
+    if (optedOut.has(user.id)) continue;
+
     const n = await prisma.notification.create({
       data: {
         userId: user.id,

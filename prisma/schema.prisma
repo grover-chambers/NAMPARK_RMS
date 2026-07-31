@@ -12,6 +12,11 @@ enum UserRole {
   SALES_REP
   DRIVER
   CASHIER
+  BRANCH_MANAGER
+  HQ_MANAGER
+  ACCOUNT_MANAGER
+  STOREKEEPER
+  DIRECTOR
 }
 
 enum VehicleStatus {
@@ -45,6 +50,17 @@ enum AssignmentStatus {
   PENDING
   IN_PROGRESS
   COMPLETED
+  PARTIAL
+}
+
+enum AssignmentDayType {
+  ORDER_TAKING
+  DELIVERY
+}
+
+enum ShiftType {
+  ONSITE
+  OFFSITE
 }
 
 model User {
@@ -61,12 +77,28 @@ model User {
   salesRep      SalesRep?
   driver        Driver?
 
+  supervisedSalesReps  SalesRep[]  @relation("SupervisorSalesRep")
+  supervisedDrivers    Driver[]    @relation("SupervisorDriver")
+  groupSupervised      RouteGroup? @relation("GroupSupervisor")
+
   blockedBlockEvents    AccountBlockEvent[]   @relation("BlockEventCashier")
   reviewedRequests      AccountUnblockRequest[] @relation("ReviewRequestCashier")
   acknowledgedAlerts    AccountAlert[]        @relation("AlertCashier")
   requestedUnblockReqs  AccountUnblockRequest[] @relation("RequestByRep")
 
   @@map("users")
+}
+
+model RouteGroup {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  supervisorId String   @unique
+  createdAt    DateTime @default(now())
+
+  supervisor User    @relation("GroupSupervisor", fields: [supervisorId], references: [id])
+  routes     Route[]
+
+  @@map("route_groups")
 }
 
 model Route {
@@ -78,27 +110,44 @@ model Route {
   isActive      Boolean   @default(true)
   createdAt     DateTime  @default(now())
 
-  assignments             DailyAssignment[]
-  missingItems            MissingItem[]
-  pricingSurveys          PricingSurvey[]
-  salesRepRoutes          SalesRepRoute[]
-  creditSales             CreditSale[]
+  groupId          String?
+  tonnage          Float?
+  orderTakingDays  Json    @default("[]")
+  deliveryDays     Json    @default("[]")
+  shiftType        ShiftType @default(ONSITE)
+  tatHours         Float?
+  targetCustomers  Int?
+  defaultVehicleId String?
+
+  group              RouteGroup?  @relation(fields: [groupId], references: [id])
+  defaultVehicle     Vehicle?     @relation(fields: [defaultVehicleId], references: [id])
+  assignments        DailyAssignment[]
+  missingItems       MissingItem[]
+  pricingSurveys     PricingSurvey[]
+  salesRepRoutes     SalesRepRoute[]
+  creditSales        CreditSale[]
   weeklyProfitabilitySnapshots WeeklyProfitabilitySnapshot[]
 
+  @@index([groupId])
+  @@index([defaultVehicleId])
   @@map("routes")
 }
 
 model SalesRep {
-  id        String    @id @default(cuid())
-  userId    String    @unique
-  name      String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  name         String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supervisorId String?
+
+  supervisor   User?     @relation("SupervisorSalesRep", fields: [supervisorId], references: [id])
 
   assignments       DailyAssignment[]
   pricingSurveys    PricingSurvey[]
   routes            SalesRepRoute[]
   cashierAccount    CashierAccount?
 
+  @@index([supervisorId])
   @@map("sales_reps")
 }
 
@@ -114,13 +163,17 @@ model SalesRepRoute {
 }
 
 model Driver {
-  id        String    @id @default(cuid())
-  userId    String    @unique
-  name      String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id           String    @id @default(cuid())
+  userId       String    @unique
+  name         String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supervisorId String?
+
+  supervisor   User?     @relation("SupervisorDriver", fields: [supervisorId], references: [id])
 
   assignments       DailyAssignment[]
 
+  @@index([supervisorId])
   @@map("drivers")
 }
 
@@ -129,13 +182,74 @@ model Vehicle {
   registration          String        @unique
   status                VehicleStatus @default(ACTIVE)
   maintenanceRatePerKm  Float?
+  tonnageCapacity       Float?
   createdAt             DateTime      @default(now())
 
   assignments       DailyAssignment[]
   inspections       VehicleInspection[]
   fleetDaily        FleetDaily[]
+  fixedCosts        VehicleFixedCost[]
+  maintenanceEvents VehicleMaintenanceEvent[]
+  defaultForRoutes  Route[]
 
   @@map("vehicles")
+}
+
+model VehicleFixedCost {
+  id          String    @id @default(cuid())
+  vehicleId   String
+  name        String    // "Insurance" | "Road License" | "Lease" | "GPS Tracking" | "Other"
+  amount      Float
+  frequency   String    @default("monthly") // "monthly" | "quarterly" | "annual"
+  dueDate     DateTime?
+  paid        Boolean   @default(false)
+  paidDate    DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId])
+  @@map("vehicle_fixed_costs")
+}
+
+model VehicleMaintenanceEvent {
+  id            String    @id @default(cuid())
+  vehicleId     String
+  date          DateTime  @db.Date
+  type          String    // "service" | "repair" | "tyre" | "battery" | "other"
+  description   String
+  cost          Float
+  mileageAtEvent Float?
+  vendor        String?
+  invoiceRef    String?
+  notes         String?
+  createdAt     DateTime  @default(now())
+
+  vehicle       Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([vehicleId])
+  @@index([date])
+  @@map("vehicle_maintenance_events")
+}
+
+model PayrollCost {
+  id          String    @id @default(cuid())
+  role        String    // "DRIVER" | "SALES_REP" | "CASHIER" | "SUPERVISOR" | "ADMIN"
+  staffName   String?
+  month       String    // "2026-07"
+  basicPay    Float
+  allowance   Float     @default(0)
+  deductions  Float     @default(0)
+  netPay      Float
+  paid        Boolean   @default(false)
+  paidDate    DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+
+  @@index([role])
+  @@index([month])
+  @@map("payroll_costs")
 }
 
 model SkuCatalog {
@@ -161,19 +275,20 @@ model SkuCatalog {
 }
 
 model DailyAssignment {
-  id            String          @id @default(cuid())
-  date          DateTime        @db.Date
+  id            String            @id @default(cuid())
+  date          DateTime          @db.Date
+  dayType       AssignmentDayType @default(DELIVERY)
   routeId       String
-  salesRepId    String
-  driverId      String
-  vehicleId     String
-  status        AssignmentStatus @default(PENDING)
-  createdAt     DateTime        @default(now())
+  salesRepId    String?
+  driverId      String?
+  vehicleId     String?
+  status        AssignmentStatus  @default(PENDING)
+  createdAt     DateTime          @default(now())
 
-  route         Route           @relation(fields: [routeId], references: [id])
-  salesRep      SalesRep        @relation(fields: [salesRepId], references: [id])
-  driver        Driver          @relation(fields: [driverId], references: [id])
-  vehicle       Vehicle         @relation(fields: [vehicleId], references: [id])
+  route         Route             @relation(fields: [routeId], references: [id])
+  salesRep      SalesRep?         @relation(fields: [salesRepId], references: [id])
+  driver        Driver?           @relation(fields: [driverId], references: [id])
+  vehicle       Vehicle?          @relation(fields: [vehicleId], references: [id])
 
   salesRepShift SalesRepShift?
   driverShift   DriverShift?
@@ -200,6 +315,8 @@ model SalesRepShift {
   customerCountActual   Int       @default(0)
   salesTarget           Float     @default(0)
   salesActual           Float     @default(0)
+  tonnageTarget         Float?
+  tonnageActual         Float?
   complaints            Int       @default(0)
   complaintTarget       Int       @default(0)
   reportSubmissionTime  DateTime?
@@ -223,8 +340,16 @@ model DriverShift {
   gatePassTime        DateTime?
   shiftEnd            DateTime?
   fuelCost            Float?
+  fuelLiters          Float?
   mileageCovered      Float?
   customerCountActual Int       @default(0)
+  targetCustomers     Int?
+  customersWithOtp    Int?
+  customersWithoutOtp Int?
+  cashCollectionTarget Float?
+  cashCollectionActual Float?
+  pendingCollection   Float?
+  loadingCheck        Boolean?
   reportSubmissionTime DateTime?
   comments            String?
   createdAt           DateTime  @default(now())
@@ -597,4 +722,31 @@ model PushSubscription {
 
   @@index([userId])
   @@map("push_subscriptions")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String
+  action     String   // "create" | "update" | "delete" | "block" | "unblock" | "approve" | "reject"
+  entityType String   // "user" | "driver" | "vehicle" | "assignment" | "account_block" | "unblock_request" | "challenge"
+  entityId   String
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model NotificationPreference {
+  id      String  @id @default(cuid())
+  userId  String
+  type    String  // "report_reminder" | "account_blocked" | "unblock_approved" | "unblock_request" | "assignment_change" | "stockout_alert"
+  enabled Boolean @default(true)
+
+  @@unique([userId, type])
+  @@index([userId])
+  @@map("notification_preferences")
 }

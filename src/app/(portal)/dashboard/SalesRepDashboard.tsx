@@ -14,6 +14,7 @@ import {
   CheckCircle2,
   ChevronRight,
 } from "lucide-react";
+import SalesRepCharts from "@/components/dashboard/SalesRepCharts";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", minimumFractionDigits: 0 }).format(n);
@@ -31,13 +32,15 @@ interface Assignment {
   id: string;
   date: string;
   status: string;
+  dayType?: string;
   route: { name: string };
   salesRepShift?: ShiftData | null;
 }
 
 export default function SalesRepDashboard() {
   const { data: session } = useSession();
-  const [todayAssignment, setTodayAssignment] = useState<Assignment | null>(null);
+  const [todayAssignments, setTodayAssignments] = useState<Assignment[]>([]);
+  const [upcomingAssignments, setUpcomingAssignments] = useState<Assignment[]>([]);
   const [weekAssignments, setWeekAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -48,7 +51,7 @@ export default function SalesRepDashboard() {
       setLoading(true);
       const today = new Date().toISOString().split("T")[0];
       try {
-        // Fetch today's and this week's assignments
+        // Fetch this week's assignments
         const startOfWeek = new Date();
         const day = startOfWeek.getDay();
         startOfWeek.setDate(startOfWeek.getDate() - day + (day === 0 ? -6 : 1));
@@ -61,10 +64,12 @@ export default function SalesRepDashboard() {
         const data = await res.json();
         const all: Assignment[] = data.data || [];
         setWeekAssignments(all);
-        const todayA = all.find((a) => a.date === today) || null;
-        setTodayAssignment(todayA);
+        setTodayAssignments(all.filter((a) => a.date === today));
+        setUpcomingAssignments(all.filter((a) => a.date > today));
       } catch {
         setWeekAssignments([]);
+        setTodayAssignments([]);
+        setUpcomingAssignments([]);
       } finally {
         setLoading(false);
       }
@@ -72,11 +77,12 @@ export default function SalesRepDashboard() {
     load();
   }, []);
 
+  const todayAssignment = todayAssignments[0] ?? null;
   const shift = todayAssignment?.salesRepShift;
-  const weekSales = weekAssignments.reduce((s, a) => s + (a.salesRepShift?.salesActual || 0), 0);
-  const weekTarget = weekAssignments.reduce((s, a) => s + (a.salesRepShift?.salesTarget || 0), 0);
-  const weekCustomers = weekAssignments.reduce((s, a) => s + (a.salesRepShift?.customerCountActual || 0), 0);
-  const weekComplaints = weekAssignments.reduce((s, a) => s + (a.salesRepShift?.complaints || 0), 0);
+  const weekSales = weekAssignments.reduce((s, a) => s + (a.salesRepShift?.salesActual ?? 0), 0);
+  const weekTarget = weekAssignments.reduce((s, a) => s + (a.salesRepShift?.salesTarget ?? 0), 0);
+  const weekCustomers = weekAssignments.reduce((s, a) => s + (a.salesRepShift?.customerCountActual ?? 0), 0);
+  const weekComplaints = weekAssignments.reduce((s, a) => s + (a.salesRepShift?.complaints ?? 0), 0);
   const completionRate = weekTarget > 0 ? Math.round((weekSales / weekTarget) * 100) : 0;
 
   if (loading) {
@@ -98,48 +104,104 @@ export default function SalesRepDashboard() {
 
       <div className="page-content space-y-5">
         {/* Today's status */}
-        {todayAssignment ? (
-          <div className="card p-5 border-l-4 border-l-teal-400 bg-gradient-to-r from-teal-50/50 to-white">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-xs text-teal-600 uppercase tracking-wide font-medium">Today&apos;s Assignment</p>
-                <p className="text-lg font-bold text-slate-800 mt-1">{todayAssignment.route.name} Route</p>
-                <p className="text-sm text-slate-500 mt-0.5">Status: {todayAssignment.status.replace("_", " ")}</p>
-              </div>
-              <Link href="/daily-report/rep" className="btn-primary btn-sm">
-                <ClipboardList size={14} /> Open Report
-              </Link>
-            </div>
-            {shift && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-teal-100">
-                <div>
-                  <p className="text-xs text-slate-400 uppercase">Sales</p>
-                  <p className="text-lg font-bold text-slate-800">{fmt(shift.salesActual)}</p>
-                  <p className="text-xs text-slate-400">of {fmt(shift.salesTarget)}</p>
+        {todayAssignments.length > 0 ? (
+          <div className="space-y-3">
+            {todayAssignments.map((a) => {
+              const aShift = a.salesRepShift;
+              return (
+                <div key={a.id} className="card p-5 border-l-4 border-l-teal-400 bg-gradient-to-r from-teal-50/50 to-white">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-xs text-teal-600 uppercase tracking-wide font-medium">
+                        Today&apos;s Assignment
+                        <span className="ml-2 px-2 py-0.5 rounded-full bg-teal-600/10 text-teal-700 text-[10px] font-semibold">
+                          {a.dayType === "ORDER_TAKING" ? "Order Taking" : "Delivery"}
+                        </span>
+                      </p>
+                      <p className="text-lg font-bold text-slate-800 mt-1">{a.route.name} Route</p>
+                      <p className="text-sm text-slate-500 mt-0.5">Status: {a.status.replace("_", " ")}</p>
+                    </div>
+                    <Link href="/daily-report/rep" className="btn-primary btn-sm">
+                      <ClipboardList size={14} /> Open Report
+                    </Link>
+                  </div>
+                  {aShift && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-teal-100">
+                      <div>
+                        <p className="text-xs text-slate-400 uppercase">Sales</p>
+                        <p className="text-lg font-bold text-slate-800">{fmt(aShift.salesActual)}</p>
+                        <p className="text-xs text-slate-400">of {fmt(aShift.salesTarget)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 uppercase">Customers</p>
+                        <p className="text-lg font-bold text-slate-800">{aShift.customerCountActual}</p>
+                        <p className="text-xs text-slate-400">of {aShift.customerCountTarget}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 uppercase">Complaints</p>
+                        <p className={`text-lg font-bold ${aShift.complaints > 0 ? "text-amber-600" : "text-green-600"}`}>{aShift.complaints}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-400 uppercase">Returns</p>
+                        <p className="text-lg font-bold text-slate-800">{aShift.returnsCount}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div>
-                  <p className="text-xs text-slate-400 uppercase">Customers</p>
-                  <p className="text-lg font-bold text-slate-800">{shift.customerCountActual}</p>
-                  <p className="text-xs text-slate-400">of {shift.customerCountTarget}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 uppercase">Complaints</p>
-                  <p className={`text-lg font-bold ${shift.complaints > 0 ? "text-amber-600" : "text-green-600"}`}>{shift.complaints}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-400 uppercase">Returns</p>
-                  <p className="text-lg font-bold text-slate-800">{shift.returnsCount}</p>
-                </div>
-              </div>
-            )}
+              );
+            })}
           </div>
         ) : (
           <div className="card p-6 text-center">
             <Route size={32} className="mx-auto mb-2 text-slate-300" />
-            <p className="text-sm text-slate-500">No assignment for today.</p>
-            <p className="text-xs text-slate-400 mt-1">Check with your administrator.</p>
+            <p className="text-sm text-slate-500">No order-taking assignment for today.</p>
+            <p className="text-xs text-slate-400 mt-1">Check the schedule below for your next route.</p>
           </div>
         )}
+
+        <SalesRepCharts
+          salesActual={shift?.salesActual ?? 0}
+          salesTarget={shift?.salesTarget ?? 0}
+          shiftOnTime={true}
+        />
+
+        {/* Upcoming schedule */}
+        <div className="card overflow-hidden">
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-slate-700">Upcoming Schedule (This Week)</h3>
+            <span className="text-xs text-slate-400">{upcomingAssignments.length} scheduled</span>
+          </div>
+          {upcomingAssignments.length === 0 ? (
+            <div className="text-center py-8 text-slate-400 text-sm">No more assignments scheduled this week.</div>
+          ) : (
+            <div className="divide-y divide-slate-100">
+              {upcomingAssignments.map((a) => (
+                <div key={a.id} className="flex items-center justify-between px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className={`px-2 py-1 rounded-md text-[10px] font-semibold ${
+                      a.dayType === "ORDER_TAKING" ? "bg-teal-50 text-teal-700" : "bg-amber-50 text-amber-700"
+                    }`}>
+                      {a.dayType === "ORDER_TAKING" ? "Order" : "Delivery"}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-700">{a.route.name}</p>
+                      <p className="text-xs text-slate-400">
+                        {new Date(a.date + "T00:00:00").toLocaleDateString("en-KE", {
+                          weekday: "long",
+                          day: "numeric",
+                          month: "short",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  <span className={`text-xs font-medium ${
+                    a.status === "COMPLETED" ? "text-green-600" : "text-slate-400"
+                  }`}>{a.status.replace("_", " ")}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Quick action */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">

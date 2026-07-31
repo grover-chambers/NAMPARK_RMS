@@ -125,7 +125,7 @@ function computeKPIStatus(
 export function computeReport(report: RouteReportData): ComputedReport {
   const { shift, route } = report;
 
-  const kpiReasons = (shift.kpiReasons as Record<string, string>) || {};
+  const kpiReasons = (shift.kpiReasons as Record<string, string>) ?? {};
 
   const kpiStatus = computeKPIStatus(
     shift.salesActual,

@@ -85,6 +85,7 @@ export default function DriverReportPage() {
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const [assignment, setAssignment] = useState<Assignment | null>(null);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [skus, setSkus] = useState<Sku[]>([]);
 
   // Loading fields
@@ -121,47 +122,58 @@ export default function DriverReportPage() {
     return `${dt.getHours().toString().padStart(2, "0")}:${dt.getMinutes().toString().padStart(2, "0")}`;
   };
 
+  const applyAssignment = useCallback((a: Assignment) => {
+    setAssignment(a);
+
+    if (a.driverShift) {
+      const s = a.driverShift;
+      setLoadingStart(dateTimeToTime(s.loadingStart));
+      setLoadingEnd(dateTimeToTime(s.loadingEnd));
+      setShiftStart(dateTimeToTime(s.shiftStart));
+      setGatePassTime(dateTimeToTime(s.gatePassTime));
+      setShiftEnd(dateTimeToTime(s.shiftEnd));
+      setCustomerCountActual(s.customerCountActual ?? 0);
+      setFuelCost(s.fuelCost != null ? String(s.fuelCost) : "");
+      setMileageCovered(s.mileageCovered != null ? String(s.mileageCovered) : "");
+      setComments(s.comments ?? "");
+
+      setReturns(
+        s.returns && s.returns.length > 0
+          ? s.returns.map((r: { skuId: string; type: string; quantity: number; price: number; amount: number; reason: string | null; comments: string | null }) => ({
+              skuId: r.skuId,
+              type: r.type,
+              quantity: r.quantity,
+              price: r.price,
+              amount: r.amount,
+              reason: r.reason ?? "",
+              comments: r.comments ?? "",
+            }))
+          : []
+      );
+    } else {
+      setReturns([]);
+    }
+  }, []);
+
   const fetchAssignment = useCallback(async () => {
     try {
       const res = await fetch("/api/daily-report/driver/today");
       const data = await res.json();
+      const list: Assignment[] = Array.isArray(data) ? data : [];
 
-      if (data && data.id) {
-        setAssignment(data);
-
-        if (data.driverShift) {
-          const s = data.driverShift;
-          setLoadingStart(dateTimeToTime(s.loadingStart));
-          setLoadingEnd(dateTimeToTime(s.loadingEnd));
-          setShiftStart(dateTimeToTime(s.shiftStart));
-          setGatePassTime(dateTimeToTime(s.gatePassTime));
-          setShiftEnd(dateTimeToTime(s.shiftEnd));
-          setCustomerCountActual(s.customerCountActual || 0);
-          setFuelCost(s.fuelCost != null ? String(s.fuelCost) : "");
-          setMileageCovered(s.mileageCovered != null ? String(s.mileageCovered) : "");
-          setComments(s.comments || "");
-
-          if (s.returns && s.returns.length > 0) {
-            setReturns(
-              s.returns.map((r: { skuId: string; type: string; quantity: number; price: number; amount: number; reason: string | null; comments: string | null }) => ({
-                skuId: r.skuId,
-                type: r.type,
-                quantity: r.quantity,
-                price: r.price,
-                amount: r.amount,
-                reason: r.reason || "",
-                comments: r.comments || "",
-              }))
-            );
-          }
-        }
+      setAssignments(list);
+      if (list.length > 0) {
+        applyAssignment(list[0]);
+      } else {
+        setAssignment(null);
       }
     } catch {
-      // No assignment
+      setAssignment(null);
+      setAssignments([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyAssignment]);
 
   const fetchSkus = useCallback(async () => {
     try {
@@ -328,6 +340,31 @@ export default function DriverReportPage() {
       </div>
 
       <div className="page-content max-w-4xl mx-auto space-y-6 pb-32">
+        {/* ── Route switcher when multiple assignments today ── */}
+        {assignments.length > 1 && (
+          <div className="card p-4">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+              You have {assignments.length} routes today — select the route to report for
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {assignments.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => applyAssignment(a)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                    assignment?.id === a.id
+                      ? "bg-teal-600 text-white border-teal-600"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-teal-500"
+                  }`}
+                >
+                  {a.route.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── Loading Info ── */}
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-4">
@@ -411,7 +448,7 @@ export default function DriverReportPage() {
               <input
                 type="number"
                 min={0}
-                value={customerCountActual || ""}
+                value={customerCountActual ?? ""}
                 onChange={(e) => setCustomerCountActual(Number(e.target.value))}
                 className="form-input"
                 placeholder="0"
@@ -505,7 +542,7 @@ export default function DriverReportPage() {
                         <input
                           type="number"
                           min={1}
-                          value={ret.quantity || ""}
+                          value={ret.quantity ?? ""}
                           onChange={(e) => updateReturn(i, "quantity", Number(e.target.value))}
                           className="form-input"
                           placeholder="0"
@@ -516,7 +553,7 @@ export default function DriverReportPage() {
                         <input
                           type="number"
                           min={0}
-                          value={ret.price || ""}
+                          value={ret.price ?? ""}
                           onChange={(e) => updateReturn(i, "price", Number(e.target.value))}
                           className="form-input"
                           placeholder="0"
@@ -525,7 +562,7 @@ export default function DriverReportPage() {
                       <div>
                         <label className="form-label">Amount</label>
                         <div className="form-input bg-slate-50 text-slate-600 font-medium">
-                          KES {(ret.amount || 0).toLocaleString()}
+                          KES {(ret.amount ?? 0).toLocaleString()}
                         </div>
                       </div>
                     </div>
@@ -568,7 +605,7 @@ export default function DriverReportPage() {
               <div className="bg-amber-50 border border-amber-200 rounded-xl px-6 py-3">
                 <p className="text-xs text-amber-600 font-medium">Total Returns Value</p>
                 <p className="text-xl font-bold text-amber-700">
-                  KES {returns.reduce((sum, r) => sum + (r.amount || 0), 0).toLocaleString()}
+                  KES {returns.reduce((sum, r) => sum + (r.amount ?? 0), 0).toLocaleString()}
                 </p>
               </div>
             </div>

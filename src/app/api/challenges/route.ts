@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit";
 
 export async function GET(request: NextRequest) {
   try {
@@ -63,6 +64,8 @@ export async function POST(request: NextRequest) {
         when: when ? new Date(when) : null,
       },
     });
+
+    await createAuditLog((session.user as any).id, "create", "challenge", challenge.id, { gap: challenge.gap });
 
     return NextResponse.json(
       { success: true, data: challenge },

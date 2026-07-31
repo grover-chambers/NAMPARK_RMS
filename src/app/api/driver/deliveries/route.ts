@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
         id: assignment.id,
         date: assignment.date,
         route: assignment.route.name,
-        vehicle: assignment.vehicle.registration,
+        vehicle: assignment.vehicle?.registration ?? null,
         status: assignment.status,
       },
       orders,

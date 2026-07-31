@@ -78,9 +78,9 @@ async function computeForRoute(
     },
   }));
 
-  const returnsTotal = returns.reduce((sum, r) => sum + (r.amount || 0), 0);
+  const returnsTotal = returns.reduce((sum, r) => sum + (r.amount ?? 0), 0);
   const missingItemsTotal = assignments.reduce(
-    (sum, a) => sum + a.missingItems.reduce((s, m) => s + (m.amount || 0), 0),
+    (sum, a) => sum + a.missingItems.reduce((s, m) => s + (m.amount ?? 0), 0),
     0
   );
 

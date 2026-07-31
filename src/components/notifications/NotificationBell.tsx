@@ -26,7 +26,7 @@ export default function NotificationBell() {
       if (res.ok) {
         const data = await res.json();
         setNotifications(data.notifications || []);
-        setUnreadCount(data.unreadCount || 0);
+        setUnreadCount(data.unreadCount ?? 0);
       }
     } catch {}
   }, []);

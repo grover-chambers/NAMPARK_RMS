@@ -18,9 +18,10 @@ export async function GET() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const assignment = await prisma.dailyAssignment.findFirst({
+    const assignments = await prisma.dailyAssignment.findMany({
       where: {
         salesRepId: user.salesRepId,
+        dayType: "ORDER_TAKING",
         date: today,
       },
       include: {
@@ -35,9 +36,10 @@ export async function GET() {
           include: { sku: true },
         },
       },
+      orderBy: { createdAt: "asc" },
     });
 
-    return NextResponse.json(assignment || null);
+    return NextResponse.json(assignments);
   } catch {
     return NextResponse.json({ error: "Failed to fetch today's assignment" }, { status: 500 });
   }

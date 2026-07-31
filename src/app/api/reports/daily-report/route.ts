@@ -86,9 +86,15 @@ export async function GET(request: NextRequest) {
           name: assignment.route.name,
           targetDaily: assignment.route.targetDaily,
         },
-        salesRep: { id: assignment.salesRep.id, name: assignment.salesRep.name },
-        driver: { id: assignment.driver.id, name: assignment.driver.name },
-        vehicle: { id: assignment.vehicle.id, registration: assignment.vehicle.registration },
+        salesRep: assignment.salesRep
+          ? { id: assignment.salesRep.id, name: assignment.salesRep.name }
+          : { id: "", name: "Unassigned" },
+        driver: assignment.driver
+          ? { id: assignment.driver.id, name: assignment.driver.name }
+          : { id: "", name: "Unassigned" },
+        vehicle: assignment.vehicle
+          ? { id: assignment.vehicle.id, registration: assignment.vehicle.registration }
+          : { id: "", registration: "—" },
         shift: {
           shiftOpen: shift?.shiftOpen?.toISOString() ?? null,
           shiftClose: shift?.shiftClose?.toISOString() ?? null,

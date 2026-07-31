@@ -83,15 +83,15 @@ export async function GET(req: NextRequest) {
 
       const shift = a.salesRepShift;
       if (shift) {
-        const salesActual = Number(shift.salesActual || 0);
-        const customers = Number(shift.customerCountActual || 0);
+        const salesActual = Number(shift.salesActual ?? 0);
+        const customers = Number(shift.customerCountActual ?? 0);
         totalSales += salesActual;
         totalCustomers += customers;
         routeBreakdown[routeName].sales += salesActual;
         routeBreakdown[routeName].customers += customers;
       }
 
-      const missingCount = a.missingItems?.length || 0;
+      const missingCount = a.missingItems?.length ?? 0;
       totalMissingItems += missingCount;
       routeBreakdown[routeName].missingItems += missingCount;
 
@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
           routeId,
           weekStart: weekStart.toISOString().split("T")[0],
           tonnageDelivered: 0,
-          sales: routeSnapshot?.sales || 0,
+          sales: routeSnapshot?.sales ?? 0,
           cogs: null,
           returnsCost: 0,
           costOfSales: null,
@@ -142,7 +142,7 @@ export async function GET(req: NextRequest) {
           cogsStatus: "pending_pricing",
         },
         update: {
-          sales: routeSnapshot?.sales || 0,
+          sales: routeSnapshot?.sales ?? 0,
         },
       });
     }

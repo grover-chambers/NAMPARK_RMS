@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit";
+import { createNotification } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +61,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         ]);
       }
     }
+
+    await createNotification({
+      userId: request.requestedByRepId,
+      title: decision === "approved" ? "Unblock Request Approved" : "Unblock Request Rejected",
+      body: `Your unblock request for ${request.routeOrRetailerRef} has been ${decision}`,
+      type: decision === "approved" ? "unblock_approved" : "message",
+      link: "/cashier/accounts",
+      push: true,
+    });
+
+    await createAuditLog(userId, "update", "unblock_request", id, { decision, requestAccountId: request.accountId });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

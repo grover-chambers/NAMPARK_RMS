@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createNotification, createNotificationForRole } from "@/lib/notifications";
+import { repReportSchema } from "@/lib/validations";
 
 type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -23,10 +25,18 @@ export async function POST(req: NextRequest) {
     } catch {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
+
+    const parsed = repReportSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten().fieldErrors }, { status: 400 });
+    }
+
     const {
       assignmentId,
       shiftOpen,
       shiftClose,
+      shiftOpenTarget,
+      shiftCloseTarget,
       customerCountActual,
       salesActual,
       complaints,
@@ -41,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     const assignment = await prisma.dailyAssignment.findUnique({
       where: { id: assignmentId },
-      include: { route: true, salesRepShift: true },
+      include: { route: true, salesRepShift: true, salesRep: { include: { supervisor: true } } },
     });
 
     if (!assignment) {
@@ -59,11 +69,13 @@ export async function POST(req: NextRequest) {
       const shiftData = {
         shiftOpen: shiftOpen ? new Date(shiftOpen) : null,
         shiftClose: shiftClose ? new Date(shiftClose) : null,
+        shiftOpenTarget: shiftOpenTarget ? new Date(shiftOpenTarget) : null,
+        shiftCloseTarget: shiftCloseTarget ? new Date(shiftCloseTarget) : null,
         customerCountTarget: assignment.route.targetDaily ? Math.round(assignment.route.targetDaily) : 0,
-        customerCountActual: Number(customerCountActual) || 0,
+        customerCountActual: Number(customerCountActual) ?? 0,
         salesTarget: assignment.route.targetDaily || 0,
-        salesActual: Number(salesActual) || 0,
-        complaints: Number(complaints) || 0,
+        salesActual: Number(salesActual) ?? 0,
+        complaints: Number(complaints) ?? 0,
         reportSubmissionTime: now,
         comments: comments || null,
       };
@@ -170,6 +182,22 @@ export async function POST(req: NextRequest) {
         data: { status: "COMPLETED" },
       });
     });
+
+    await createNotificationForRole("ADMIN", {
+      title: "Daily report submitted",
+      body: `Report submitted for ${assignment.route.name}`,
+      type: "report_reminder",
+      link: `/daily-report/view?assignmentId=${assignmentId}`,
+    });
+    if (assignment.salesRep?.supervisor) {
+      await createNotification({
+        userId: assignment.salesRep.supervisor.id,
+        title: "Daily report submitted",
+        body: `Report submitted by ${assignment.salesRep.name} for ${assignment.route.name}`,
+        type: "report_reminder",
+        link: `/daily-report/view?assignmentId=${assignmentId}`,
+      });
+    }
 
     return NextResponse.json({ success: true, message: "Report saved successfully" });
   } catch {

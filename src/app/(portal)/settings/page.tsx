@@ -21,6 +21,7 @@ import {
   Shield,
 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
+import PushToggle from "@/components/notifications/PushToggle";
 
 type Tab = "general" | "routes" | "staff" | "catalog" | "notifications";
 
@@ -284,6 +285,7 @@ function StaffSettings() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
+  const [editUser, setEditUser] = useState<any>(null);
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "SALES_REP", phone: "" });
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
@@ -300,24 +302,56 @@ function StaffSettings() {
 
   useEffect(() => { fetchUsers(); }, []);
 
-  const handleAdd = async (e: React.FormEvent) => {
+  const openAdd = () => {
+    setForm({ name: "", email: "", password: "", role: "SALES_REP", phone: "" });
+    setEditUser(null);
+    setMsg(null);
+    setShowAdd(true);
+  };
+
+  const openEdit = (u: any) => {
+    setForm({ name: u.name, email: u.email, password: "", role: u.role, phone: u.phone || "" });
+    setEditUser(u);
+    setMsg(null);
+    setShowAdd(true);
+  };
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setMsg(null);
     try {
-      const res = await fetch("/api/staff", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setMsg({ type: "ok", text: `${form.name} added!` });
-        setForm({ name: "", email: "", password: "", role: "SALES_REP", phone: "" });
-        fetchUsers();
-        setTimeout(() => setShowAdd(false), 1000);
+      if (editUser) {
+        const payload: any = { name: form.name, email: form.email, role: form.role, phone: form.phone };
+        if (form.password) payload.password = form.password;
+        const res = await fetch(`/api/staff/${editUser.id}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setMsg({ type: "ok", text: `${form.name} updated!` });
+          fetchUsers();
+          setTimeout(() => setShowAdd(false), 1000);
+        } else {
+          setMsg({ type: "err", text: data.error || "Failed" });
+        }
       } else {
-        setMsg({ type: "err", text: data.error || "Failed" });
+        const res = await fetch("/api/staff", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(form),
+        });
+        const data = await res.json();
+        if (data.success) {
+          setMsg({ type: "ok", text: `${form.name} added!` });
+          setForm({ name: "", email: "", password: "", role: "SALES_REP", phone: "" });
+          fetchUsers();
+          setTimeout(() => setShowAdd(false), 1000);
+        } else {
+          setMsg({ type: "err", text: data.error || "Failed" });
+        }
       }
     } catch {
       setMsg({ type: "err", text: "Network error" });
@@ -325,18 +359,35 @@ function StaffSettings() {
     setSaving(false);
   };
 
+  const handleToggleActive = async (u: any) => {
+    const action = u.isActive ? "deactivate" : "activate";
+    if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} ${u.name}?`)) return;
+    try {
+      const res = await fetch(`/api/staff/${u.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !u.isActive }),
+      });
+      const data = await res.json();
+      if (data.success) fetchUsers();
+    } catch {}
+  };
+
   const roleColors: Record<string, string> = {
     ADMIN: "badge-danger",
     SUPERVISOR: "badge-info",
     SALES_REP: "badge-success",
     DRIVER: "badge-warning",
+    CASHIER: "badge-neutral",
   };
+
+  const roleOptions = ["SALES_REP", "DRIVER", "SUPERVISOR", "CASHIER"];
 
   return (
     <div className="card overflow-hidden">
       <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-slate-700">Staff Management ({users.length})</h3>
-        <button onClick={() => { setMsg(null); setShowAdd(true); }} className="btn-primary btn-sm"><Plus size={14} /> Add Staff</button>
+        <button onClick={openAdd} className="btn-primary btn-sm"><Plus size={14} /> Add Staff</button>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full">
@@ -347,19 +398,27 @@ function StaffSettings() {
               <th className="table-header">Role</th>
               <th className="table-header">Status</th>
               <th className="table-header">Joined</th>
+              <th className="table-header text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={5} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin text-teal-600 mx-auto" /></td></tr>
+              <tr><td colSpan={6} className="text-center py-8"><Loader2 className="w-5 h-5 animate-spin text-teal-600 mx-auto" /></td></tr>
             ) : (
               users.map((u: any) => (
                 <tr key={u.id} className="border-b border-slate-50 hover:bg-slate-50/50">
                   <td className="table-cell font-medium">{u.name}</td>
                   <td className="table-cell text-slate-500 text-xs">{u.email}</td>
                   <td className="table-cell"><span className={`${roleColors[u.role] || "badge-neutral"} capitalize`}>{u.role.replace("_", " ")}</span></td>
-                  <td className="table-cell"><span className={u.isActive ? "badge-success" : "badge-danger"}>{u.isActive ? "Active" : "Inactive"}</span></td>
+                  <td className="table-cell">
+                    <button onClick={() => handleToggleActive(u)} className={`text-xs ${u.isActive ? "badge-success" : "badge-danger"} cursor-pointer`}>
+                      {u.isActive ? "Active" : "Inactive"}
+                    </button>
+                  </td>
                   <td className="table-cell text-xs text-slate-400">{new Date(u.createdAt).toLocaleDateString("en-KE")}</td>
+                  <td className="table-cell text-right">
+                    <button onClick={() => openEdit(u)} className="btn-ghost btn-sm" title="Edit"><Edit3 size={14} /></button>
+                  </td>
                 </tr>
               ))
             )}
@@ -367,8 +426,8 @@ function StaffSettings() {
         </table>
       </div>
 
-      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title="Add Staff Member">
-        <form onSubmit={handleAdd} className="space-y-4">
+      <Modal isOpen={showAdd} onClose={() => setShowAdd(false)} title={editUser ? "Edit Staff Member" : "Add Staff Member"}>
+        <form onSubmit={handleSave} className="space-y-4">
           {msg && (
             <div className={`p-3 rounded-lg text-sm ${msg.type === "ok" ? "bg-green-50 text-green-700 border border-green-200" : "bg-red-50 text-red-600 border border-red-200"}`}>{msg.text}</div>
           )}
@@ -390,20 +449,18 @@ function StaffSettings() {
             <div>
               <label className="form-label">Role *</label>
               <select className="form-select" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-                <option value="SALES_REP">Sales Rep</option>
-                <option value="DRIVER">Driver</option>
-                <option value="SUPERVISOR">Supervisor</option>
+                {roleOptions.map((r) => <option key={r} value={r}>{r.replace("_", " ")}</option>)}
               </select>
             </div>
             <div>
-              <label className="form-label">Password *</label>
-              <input type="password" className="form-input" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required minLength={6} />
+              <label className="form-label">{editUser ? "New Password (leave blank to keep)" : "Password *"}</label>
+              <input type="password" className="form-input" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required={!editUser} minLength={editUser ? 0 : 6} />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <button type="button" onClick={() => setShowAdd(false)} className="btn-outline">Cancel</button>
             <button type="submit" disabled={saving} className="btn-primary">
-              {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} Add Staff
+              {saving ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />} {editUser ? "Update" : "Add Staff"}
             </button>
           </div>
         </form>
@@ -434,7 +491,7 @@ function CatalogSettings() {
 
   useEffect(() => { fetchSkus(); }, []);
 
-  const filtered = skus.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()) || (s.category || "").toLowerCase().includes(search.toLowerCase()));
+  const filtered = skus.filter((s) => s.name.toLowerCase().includes(search.toLowerCase()) || (s.category ?? "").toLowerCase().includes(search.toLowerCase()));
 
   const categories = [...new Set(skus.map((s) => s.category).filter(Boolean))];
 
@@ -582,12 +639,48 @@ function CatalogSettings() {
 
 // ── Notification Settings ──
 function NotificationSettings() {
-  const [settings, setSettings] = useState({
-    emailNotifications: true,
-    missingItemAlerts: true,
-    lateSubmissionAlerts: true,
-    weeklyReportEmail: true,
-  });
+  const [prefs, setPrefs] = useState<Record<string, boolean>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/notifications/preferences")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success) {
+          const map: Record<string, boolean> = {};
+          data.data.forEach((p: any) => { map[p.type] = p.enabled; });
+          setPrefs(map);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const toggle = async (type: string, enabled: boolean) => {
+    setPrefs((prev) => ({ ...prev, [type]: enabled }));
+    await fetch("/api/notifications/preferences", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, enabled }),
+    });
+  };
+
+  const items = [
+    { key: "report_reminder", label: "Report Reminders", desc: "Remind when daily reports are due" },
+    { key: "account_blocked", label: "Account Blocked", desc: "Notify when a cashier account is blocked" },
+    { key: "unblock_approved", label: "Unblock Approved", desc: "Notify when an unblock request is approved" },
+    { key: "unblock_request", label: "Unblock Requests", desc: "Alert cashiers of new unblock requests" },
+    { key: "assignment_change", label: "Assignment Changes", desc: "Notify when assignments are created or modified" },
+    { key: "stockout_alert", label: "Stockout Alerts", desc: "Alert when items are chronically missing" },
+  ];
+
+  if (loading) {
+    return (
+      <div className="card p-6 flex items-center justify-center">
+        <Loader2 className="w-5 h-5 animate-spin text-teal-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="card p-6 space-y-5">
@@ -595,35 +688,27 @@ function NotificationSettings() {
         <div className="p-2 rounded-lg bg-amber-50 text-amber-600"><Bell size={18} /></div>
         <div>
           <h3 className="text-sm font-semibold text-slate-700">Notification Preferences</h3>
-          <p className="text-xs text-slate-400">Configure alerts and notifications (coming soon)</p>
+          <p className="text-xs text-slate-400">Control which notifications you receive</p>
         </div>
       </div>
 
-      {[
-        { key: "emailNotifications", label: "Email Notifications", desc: "Receive system alerts via email" },
-        { key: "missingItemAlerts", label: "Missing Item Alerts", desc: "Alert when items are chronically missing across routes" },
-        { key: "lateSubmissionAlerts", label: "Late Submission Alerts", desc: "Alert when reps/drivers miss report deadlines" },
-        { key: "weeklyReportEmail", label: "Weekly Report Email", desc: "Auto-send weekly executive summary to management" },
-      ].map((item) => (
+      {items.map((item) => (
         <div key={item.key} className="flex items-center justify-between py-3 border-b border-slate-50 last:border-0">
           <div>
             <p className="text-sm font-medium text-slate-700">{item.label}</p>
             <p className="text-xs text-slate-400">{item.desc}</p>
           </div>
           <button
-            onClick={() => setSettings({ ...settings, [item.key]: !(settings as any)[item.key] })}
-            className={`relative w-11 h-6 rounded-full transition-colors ${(settings as any)[item.key] ? "bg-teal-600" : "bg-slate-300"}`}
+            onClick={() => toggle(item.key, !prefs[item.key])}
+            className={`relative w-11 h-6 rounded-full transition-colors ${prefs[item.key] !== false ? "bg-teal-600" : "bg-slate-300"}`}
           >
-            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${(settings as any)[item.key] ? "translate-x-5" : ""}`} />
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${prefs[item.key] !== false ? "translate-x-5" : ""}`} />
           </button>
         </div>
       ))}
 
-      <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <Shield size={14} />
-          <span>Notification system will be activated in the next deployment phase.</span>
-        </div>
+      <div className="border-t border-slate-100 pt-4 mt-2">
+        <PushToggle />
       </div>
     </div>
   );

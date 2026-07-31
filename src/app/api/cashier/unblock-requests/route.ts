@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit";
+import { createNotificationForRole } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -72,6 +74,15 @@ export async function POST(req: NextRequest) {
         justification,
       },
     });
+
+    await createNotificationForRole("CASHIER", {
+      title: "Unblock Request Submitted",
+      body: `A sales rep has requested an account unblock for KES ${parsedAmount.toLocaleString()} on ${routeOrRetailerRef}`,
+      type: "unblock_request",
+      link: "/cashier/requests",
+    });
+
+    await createAuditLog(userId, "create", "unblock_request", request.id, { accountId, amount: parsedAmount, routeOrRetailerRef });
 
     return NextResponse.json({ data: request }, { status: 201 });
   } catch (error: any) {

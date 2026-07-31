@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit";
 import bcrypt from "bcryptjs";
 
 export async function GET() {
@@ -10,7 +11,7 @@ export async function GET() {
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const drivers = await prisma.driver.findMany({
-      include: { user: { select: { name: true, email: true, isActive: true } } },
+      include: { user: { select: { name: true, email: true, isActive: true, phone: true } } },
       orderBy: { name: "asc" },
     });
 
@@ -45,6 +46,8 @@ export async function POST(request: Request) {
     const driver = await prisma.driver.create({
       data: { userId: user.id, name },
     });
+
+    await createAuditLog((session.user as any).id, "create", "driver", driver.id, { name: driver.name });
 
     return NextResponse.json(driver);
   } catch (e: any) {

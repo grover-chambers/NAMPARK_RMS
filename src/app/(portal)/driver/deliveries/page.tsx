@@ -64,9 +64,9 @@ export default function DriverDeliveriesPage() {
           setAssignment(data.assignment);
           setOrders(data.orders || []);
           setDeliveryStops(data.deliveryStops || []);
-          setProgress(data.progress || 0);
-          setTotalDelivered(data.totalDelivered || 0);
-          setTotalOrders(data.totalOrders || 0);
+          setProgress(data.progress ?? 0);
+          setTotalDelivered(data.totalDelivered ?? 0);
+          setTotalOrders(data.totalOrders ?? 0);
         } else {
           setAssignment(null);
           setOrders([]);

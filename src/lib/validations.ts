@@ -1,24 +1,31 @@
 import { z } from "zod";
 
 export const repReportSchema = z.object({
+  assignmentId: z.string().min(1, "Assignment is required"),
   shiftOpen: z.string().optional(),
   shiftClose: z.string().optional(),
-  customerCountActual: z.number().int().min(0).optional(),
-  salesActual: z.number().min(0).optional(),
-  complaints: z.number().int().min(0).optional(),
+  shiftOpenTarget: z.string().optional(),
+  shiftCloseTarget: z.string().optional(),
+  customerCountActual: z.number().optional(),
+  salesActual: z.number().optional(),
+  complaints: z.number().optional(),
   comments: z.string().optional(),
+  orders: z.array(z.any()).optional(),
+  missingItems: z.array(z.any()).optional(),
 });
 
 export const driverReportSchema = z.object({
+  assignmentId: z.string().min(1, "Assignment is required"),
   loadingStart: z.string().optional(),
   loadingEnd: z.string().optional(),
   shiftStart: z.string().optional(),
   gatePassTime: z.string().optional(),
   shiftEnd: z.string().optional(),
-  fuelCost: z.number().min(0).optional(),
-  mileageCovered: z.number().min(0).optional(),
-  customerCountActual: z.number().int().min(0).optional(),
+  fuelCost: z.number().optional(),
+  mileageCovered: z.number().optional(),
+  customerCountActual: z.number().optional(),
   comments: z.string().optional(),
+  returns: z.array(z.any()).optional(),
 });
 
 export const orderSchema = z.object({
@@ -44,7 +51,8 @@ export const missingItemSchema = z.object({
 export const assignmentSchema = z.object({
   date: z.string().min(1, "Date is required"),
   routeId: z.string().min(1, "Route is required"),
-  salesRepId: z.string().min(1, "Sales rep is required"),
-  driverId: z.string().min(1, "Driver is required"),
-  vehicleId: z.string().min(1, "Vehicle is required"),
+  dayType: z.enum(["ORDER_TAKING", "DELIVERY"]).optional(),
+  salesRepId: z.string().optional().nullable(),
+  driverId: z.string().optional().nullable(),
+  vehicleId: z.string().optional().nullable(),
 });

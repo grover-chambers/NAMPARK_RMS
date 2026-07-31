@@ -9,6 +9,7 @@ import {
   Loader2,
   Filter,
   X,
+  Wand2,
 } from "lucide-react";
 import { formatDate, getWeekRange } from "@/lib/utils";
 import { format, addWeeks, subWeeks, parseISO } from "date-fns";
@@ -34,10 +35,11 @@ interface Assignment {
   id: string;
   date: string;
   status: string;
+  dayType?: string;
   route: { id: string; name: string };
-  salesRep: { id: string; name: string };
-  driver: { id: string; name: string };
-  vehicle: { id: string; registration: string };
+  salesRep: { id: string; name: string } | null;
+  driver: { id: string; name: string } | null;
+  vehicle: { id: string; registration: string } | null;
 }
 
 export default function AssignmentsPage() {
@@ -50,6 +52,10 @@ export default function AssignmentsPage() {
   const [currentWeekDate, setCurrentWeekDate] = useState(new Date());
   const weekRange = useMemo(() => getWeekRange(currentWeekDate), [currentWeekDate]);
 
+  const [dayTypeFilter, setDayTypeFilter] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [genMessage, setGenMessage] = useState("");
+
   const [routes, setRoutes] = useState<RouteOption[]>([]);
   const [salesReps, setSalesReps] = useState<SalesRepOption[]>([]);
   const [drivers, setDrivers] = useState<DriverOption[]>([]);
@@ -61,25 +67,49 @@ export default function AssignmentsPage() {
     salesRepId: "",
     driverId: "",
     vehicleId: "",
+    dayType: "DELIVERY",
   });
 
   useEffect(() => {
     fetchAssignments();
     fetchOptions();
-  }, [weekRange]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weekRange, dayTypeFilter]);
 
   async function fetchAssignments() {
     setLoading(true);
     try {
-      const res = await fetch(
-        `/api/assignments?startDate=${weekRange.start.toISOString()}&endDate=${weekRange.end.toISOString()}`
-      );
+      const params = new URLSearchParams({
+        startDate: weekRange.start.toISOString(),
+        endDate: weekRange.end.toISOString(),
+      });
+      if (dayTypeFilter) params.set("dayType", dayTypeFilter);
+      const res = await fetch(`/api/assignments?${params.toString()}`);
       const data = await res.json();
       if (data.success) setAssignments(data.data);
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleGenerate() {
+    setGenerating(true);
+    setGenMessage("");
+    try {
+      const res = await fetch("/api/assignments/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const data = await res.json();
+      setGenMessage(data.success ? `Schedule generated: ${data.message}` : data.error || "Failed to generate schedule");
+      if (data.success) fetchAssignments();
+    } catch {
+      setGenMessage("Network error. Please try again.");
+    } finally {
+      setGenerating(false);
     }
   }
 
@@ -123,6 +153,7 @@ export default function AssignmentsPage() {
           salesRepId: "",
           driverId: "",
           vehicleId: "",
+          dayType: "DELIVERY",
         });
         fetchAssignments();
       } else {
@@ -157,15 +188,39 @@ export default function AssignmentsPage() {
               {formatDate(new Date())}
             </p>
           </div>
-          <button
-            onClick={() => setShowForm(!showForm)}
-            className="btn-primary"
-          >
-            {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-            {showForm ? "Cancel" : "Create New Assignment"}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleGenerate}
+              disabled={generating}
+              className="btn-outline"
+            >
+              {generating ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Wand2 className="w-4 h-4" />
+              )}
+              {generating ? "Generating..." : "Generate Schedule"}
+            </button>
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="btn-primary"
+            >
+              {showForm ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+              {showForm ? "Cancel" : "Create New Assignment"}
+            </button>
+          </div>
         </div>
       </div>
+
+      {genMessage && (
+        <div className={`p-3 rounded-lg text-sm border ${
+          genMessage.startsWith("Schedule generated")
+            ? "bg-green-50 border-green-200 text-green-700"
+            : "bg-red-50 border-red-200 text-red-700"
+        }`}>
+          {genMessage}
+        </div>
+      )}
 
       {showForm && (
         <div className="card p-5">
@@ -203,12 +258,22 @@ export default function AssignmentsPage() {
               </select>
             </div>
             <div>
-              <label className="form-label">Sales Rep</label>
+              <label className="form-label">Day Type</label>
+              <select
+                value={form.dayType}
+                onChange={(e) => setForm({ ...form, dayType: e.target.value })}
+                className="form-select"
+              >
+                <option value="ORDER_TAKING">Order Taking</option>
+                <option value="DELIVERY">Delivery</option>
+              </select>
+            </div>
+            <div>
+              <label className="form-label">Sales Rep (Order Taking)</label>
               <select
                 value={form.salesRepId}
                 onChange={(e) => setForm({ ...form, salesRepId: e.target.value })}
                 className="form-select"
-                required
               >
                 <option value="">Select sales rep</option>
                 {salesReps.map((sr) => (
@@ -222,7 +287,6 @@ export default function AssignmentsPage() {
                 value={form.driverId}
                 onChange={(e) => setForm({ ...form, driverId: e.target.value })}
                 className="form-select"
-                required
               >
                 <option value="">Select driver</option>
                 {drivers.map((d) => (
@@ -236,7 +300,6 @@ export default function AssignmentsPage() {
                 value={form.vehicleId}
                 onChange={(e) => setForm({ ...form, vehicleId: e.target.value })}
                 className="form-select"
-                required
               >
                 <option value="">Select vehicle</option>
                 {vehicles.map((v) => (
@@ -267,6 +330,15 @@ export default function AssignmentsPage() {
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-slate-400" />
             <h2 className="font-serif font-bold text-slate-800">Week View</h2>
+            <select
+              value={dayTypeFilter}
+              onChange={(e) => setDayTypeFilter(e.target.value)}
+              className="form-select !w-auto !py-1 !text-xs ml-2"
+            >
+              <option value="">All Types</option>
+              <option value="ORDER_TAKING">Order Taking</option>
+              <option value="DELIVERY">Delivery</option>
+            </select>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -309,6 +381,7 @@ export default function AssignmentsPage() {
                     <thead>
                       <tr className="border-b border-slate-100">
                         <th className="table-header">Route</th>
+                        <th className="table-header">Type</th>
                         <th className="table-header">Sales Rep</th>
                         <th className="table-header">Driver</th>
                         <th className="table-header">Vehicle</th>
@@ -319,10 +392,17 @@ export default function AssignmentsPage() {
                       {items.map((a) => (
                         <tr key={a.id} className="hover:bg-slate-50/50">
                           <td className="table-cell font-medium">{a.route.name}</td>
-                          <td className="table-cell">{a.salesRep.name}</td>
-                          <td className="table-cell">{a.driver.name}</td>
+                          <td className="table-cell">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                              a.dayType === "ORDER_TAKING" ? "bg-teal-50 text-teal-700" : "bg-amber-50 text-amber-700"
+                            }`}>
+                              {a.dayType === "ORDER_TAKING" ? "Order" : "Delivery"}
+                            </span>
+                          </td>
+                          <td className="table-cell">{a.salesRep?.name ?? "—"}</td>
+                          <td className="table-cell">{a.driver?.name ?? "—"}</td>
                           <td className="table-cell font-mono text-xs">
-                            {a.vehicle.registration}
+                            {a.vehicle?.registration ?? "—"}
                           </td>
                           <td className="table-cell">
                             <StatusBadge status={a.status} />
@@ -345,11 +425,13 @@ function StatusBadge({ status }: { status: string }) {
   const styles: Record<string, string> = {
     PENDING: "badge-warning",
     IN_PROGRESS: "badge-info",
+    PARTIAL: "badge-warning",
     COMPLETED: "badge-success",
   };
   const labels: Record<string, string> = {
     PENDING: "Pending",
     IN_PROGRESS: "In Progress",
+    PARTIAL: "Partial",
     COMPLETED: "Completed",
   };
   return (

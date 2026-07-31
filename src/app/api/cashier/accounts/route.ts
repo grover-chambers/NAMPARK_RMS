@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     const account = await prisma.cashierAccount.create({
       data: {
         repId,
-        creditReferenceAmount: creditReferenceAmount || 0,
+        creditReferenceAmount: creditReferenceAmount ?? 0,
         autoBlockThresholdPct: autoBlockThresholdPct || 25,
       },
     });

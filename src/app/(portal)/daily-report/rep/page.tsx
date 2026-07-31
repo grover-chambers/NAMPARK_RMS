@@ -54,6 +54,8 @@ interface Assignment {
     id: string;
     shiftOpen: string | null;
     shiftClose: string | null;
+    shiftOpenTarget: string | null;
+    shiftCloseTarget: string | null;
     customerCountActual: number;
     salesActual: number;
     complaints: number;
@@ -191,11 +193,14 @@ export default function SalesRepReportPage() {
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const [assignment, setAssignment] = useState<Assignment | null>(null);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [skus, setSkus] = useState<Sku[]>([]);
 
   // Shift fields
   const [shiftOpen, setShiftOpen] = useState("");
   const [shiftClose, setShiftClose] = useState("");
+  const [shiftOpenTarget, setShiftOpenTarget] = useState("");
+  const [shiftCloseTarget, setShiftCloseTarget] = useState("");
   const [customerCountActual, setCustomerCountActual] = useState(0);
   const [salesActual, setSalesActual] = useState(0);
   const [complaints, setComplaints] = useState(0);
@@ -221,60 +226,71 @@ export default function SalesRepReportPage() {
     return `${dt.getHours().toString().padStart(2, "0")}:${dt.getMinutes().toString().padStart(2, "0")}`;
   };
 
+  const applyAssignment = useCallback((a: Assignment) => {
+    setAssignment(a);
+
+    // Pre-fill shift data
+    if (a.salesRepShift) {
+      const s = a.salesRepShift;
+      setShiftOpen(dateTimeToTime(s.shiftOpen));
+      setShiftClose(dateTimeToTime(s.shiftClose));
+      setShiftOpenTarget(dateTimeToTime(s.shiftOpenTarget));
+      setShiftCloseTarget(dateTimeToTime(s.shiftCloseTarget));
+      setCustomerCountActual(s.customerCountActual ?? 0);
+      setSalesActual(s.salesActual ?? 0);
+      setComplaints(s.complaints ?? 0);
+      setComments(s.comments ?? "");
+    }
+
+    // Pre-fill orders
+    setOrders(
+      a.orders && a.orders.length > 0
+        ? a.orders.map((o: { customerName: string; lines: { skuId: string; quantity: number; unitPrice: number; amount: number }[] }) => ({
+            customerName: o.customerName,
+            lines: o.lines.length > 0
+              ? o.lines.map((l: { skuId: string; quantity: number; unitPrice: number; amount: number }) => ({
+                  skuId: l.skuId,
+                  quantity: l.quantity,
+                  unitPrice: l.unitPrice,
+                  amount: l.amount,
+                }))
+              : [{ skuId: "", quantity: 1, unitPrice: 0, amount: 0 }],
+          }))
+        : [{ customerName: "", lines: [{ skuId: "", quantity: 1, unitPrice: 0, amount: 0 }] }]
+    );
+
+    // Pre-fill missing items
+    setMissingItems(
+      a.missingItems && a.missingItems.length > 0
+        ? a.missingItems.map((m: { skuId: string; customerCountAffected: number; cartonsAffected: number; notes: string | null }) => ({
+            skuId: m.skuId,
+            customerCountAffected: m.customerCountAffected,
+            cartonsAffected: m.cartonsAffected,
+            notes: m.notes ?? "",
+          }))
+        : []
+    );
+  }, []);
+
   const fetchAssignment = useCallback(async () => {
     try {
       const res = await fetch("/api/daily-report/rep/today");
       const data = await res.json();
+      const list: Assignment[] = Array.isArray(data) ? data : [];
 
-      if (data && data.id) {
-        setAssignment(data);
-
-        // Pre-fill shift data
-        if (data.salesRepShift) {
-          const s = data.salesRepShift;
-          setShiftOpen(dateTimeToTime(s.shiftOpen));
-          setShiftClose(dateTimeToTime(s.shiftClose));
-          setCustomerCountActual(s.customerCountActual || 0);
-          setSalesActual(s.salesActual || 0);
-          setComplaints(s.complaints || 0);
-          setComments(s.comments || "");
-        }
-
-        // Pre-fill orders
-        if (data.orders && data.orders.length > 0) {
-          setOrders(
-            data.orders.map((o: { customerName: string; lines: { skuId: string; quantity: number; unitPrice: number; amount: number }[] }) => ({
-              customerName: o.customerName,
-              lines: o.lines.length > 0
-                ? o.lines.map((l: { skuId: string; quantity: number; unitPrice: number; amount: number }) => ({
-                    skuId: l.skuId,
-                    quantity: l.quantity,
-                    unitPrice: l.unitPrice,
-                    amount: l.amount,
-                  }))
-                : [{ skuId: "", quantity: 1, unitPrice: 0, amount: 0 }],
-            }))
-          );
-        }
-
-        // Pre-fill missing items
-        if (data.missingItems && data.missingItems.length > 0) {
-          setMissingItems(
-            data.missingItems.map((m: { skuId: string; customerCountAffected: number; cartonsAffected: number; notes: string | null }) => ({
-              skuId: m.skuId,
-              customerCountAffected: m.customerCountAffected,
-              cartonsAffected: m.cartonsAffected,
-              notes: m.notes || "",
-            }))
-          );
-        }
+      setAssignments(list);
+      if (list.length > 0) {
+        applyAssignment(list[0]);
+      } else {
+        setAssignment(null);
       }
     } catch {
-      // No assignment
+      setAssignment(null);
+      setAssignments([]);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [applyAssignment]);
 
   const fetchSkus = useCallback(async () => {
     try {
@@ -389,6 +405,8 @@ export default function SalesRepReportPage() {
           assignmentId: assignment.id,
           shiftOpen: timeToDateTime(shiftOpen),
           shiftClose: timeToDateTime(shiftClose),
+          shiftOpenTarget: timeToDateTime(shiftOpenTarget),
+          shiftCloseTarget: timeToDateTime(shiftCloseTarget),
           customerCountActual,
           salesActual,
           complaints,
@@ -479,6 +497,31 @@ export default function SalesRepReportPage() {
       </div>
 
       <div className="page-content max-w-4xl mx-auto space-y-6 pb-32">
+        {/* ── Route switcher when multiple assignments today ── */}
+        {assignments.length > 1 && (
+          <div className="card p-4">
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+              You have {assignments.length} routes today — select the route to report for
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {assignments.map((a) => (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => applyAssignment(a)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition-colors ${
+                    assignment?.id === a.id
+                      ? "bg-teal-600 text-white border-teal-600"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-teal-500"
+                  }`}
+                >
+                  {a.route.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* ── Shift Info ── */}
         <div className="card p-6">
           <div className="flex items-center gap-2 mb-4">
@@ -487,7 +530,7 @@ export default function SalesRepReportPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="form-label">Opening Time</label>
+              <label className="form-label">Shift Open Time</label>
               <input
                 type="time"
                 value={shiftOpen}
@@ -496,12 +539,30 @@ export default function SalesRepReportPage() {
               />
             </div>
             <div>
-              <label className="form-label">Closing Time</label>
+              <label className="form-label">Shift Close Time</label>
               <input
                 type="time"
                 value={shiftClose}
                 onChange={(e) => setShiftClose(e.target.value)}
                 className="form-input"
+              />
+            </div>
+            <div>
+              <label className="form-label text-amber-600">Target Open Time</label>
+              <input
+                type="time"
+                value={shiftOpenTarget}
+                onChange={(e) => setShiftOpenTarget(e.target.value)}
+                className="form-input border-amber-200 focus:border-amber-400"
+              />
+            </div>
+            <div>
+              <label className="form-label text-amber-600">Target Close Time</label>
+              <input
+                type="time"
+                value={shiftCloseTarget}
+                onChange={(e) => setShiftCloseTarget(e.target.value)}
+                className="form-input border-amber-200 focus:border-amber-400"
               />
             </div>
           </div>
@@ -516,14 +577,14 @@ export default function SalesRepReportPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
             <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
               <p className="text-xs font-medium text-teal-600 mb-1">Customer Target</p>
-              <p className="text-2xl font-bold text-teal-700">{Math.round(assignment.route.targetDaily) || 0}</p>
+              <p className="text-2xl font-bold text-teal-700">{Math.round(assignment.route.targetDaily ?? 0)}</p>
             </div>
             <div>
               <label className="form-label">Customer Count Actual</label>
               <input
                 type="number"
                 min={0}
-                value={customerCountActual || ""}
+                value={customerCountActual ?? ""}
                 onChange={(e) => setCustomerCountActual(Number(e.target.value))}
                 className="form-input"
                 placeholder="0"
@@ -542,7 +603,7 @@ export default function SalesRepReportPage() {
               <input
                 type="number"
                 min={0}
-                value={salesActual || ""}
+                value={salesActual ?? ""}
                 onChange={(e) => setSalesActual(Number(e.target.value))}
                 className="form-input"
                 placeholder="0"
@@ -553,7 +614,7 @@ export default function SalesRepReportPage() {
               <input
                 type="number"
                 min={0}
-                value={complaints || ""}
+                value={complaints ?? ""}
                 onChange={(e) => setComplaints(Number(e.target.value))}
                 className="form-input"
                 placeholder="0"
@@ -618,13 +679,13 @@ export default function SalesRepReportPage() {
                       <input
                         type="number"
                         min={1}
-                        value={line.quantity || ""}
+                        value={line.quantity ?? ""}
                         onChange={(e) => updateLine(oi, li, "quantity", Number(e.target.value))}
                         className="form-input w-20"
                         placeholder="Qty"
                       />
                       <div className="w-28 text-right text-sm font-medium text-slate-600">
-                        KES {(line.amount || 0).toLocaleString()}
+                        KES {(line.amount ?? 0).toLocaleString()}
                       </div>
                       {order.lines.length > 1 && (
                         <button
@@ -648,7 +709,7 @@ export default function SalesRepReportPage() {
                 <div className="mt-3 pt-3 border-t border-slate-200 flex justify-end">
                   <span className="text-sm font-semibold text-slate-700">
                     Order Total: KES{" "}
-                    {order.lines.reduce((sum, l) => sum + (l.amount || 0), 0).toLocaleString()}
+                    {order.lines.reduce((sum, l) => sum + (l.amount ?? 0), 0).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -661,7 +722,7 @@ export default function SalesRepReportPage() {
               <p className="text-xl font-bold text-teal-700">
                 KES{" "}
                 {orders
-                  .reduce((sum, o) => sum + o.lines.reduce((ls, l) => ls + (l.amount || 0), 0), 0)
+                  .reduce((sum, o) => sum + o.lines.reduce((ls, l) => ls + (l.amount ?? 0), 0), 0)
                   .toLocaleString()}
               </p>
             </div>
@@ -708,7 +769,7 @@ export default function SalesRepReportPage() {
                       <input
                         type="number"
                         min={0}
-                        value={item.customerCountAffected || ""}
+                        value={item.customerCountAffected ?? ""}
                         onChange={(e) => updateMissing(i, "customerCountAffected", Number(e.target.value))}
                         className="form-input"
                         placeholder="0"
@@ -719,7 +780,7 @@ export default function SalesRepReportPage() {
                       <input
                         type="number"
                         min={0}
-                        value={item.cartonsAffected || ""}
+                        value={item.cartonsAffected ?? ""}
                         onChange={(e) => updateMissing(i, "cartonsAffected", Number(e.target.value))}
                         className="form-input"
                         placeholder="0"

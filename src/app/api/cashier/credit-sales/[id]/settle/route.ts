@@ -10,7 +10,7 @@ async function recomputeBalance(accountId: string) {
     where: { accountId, settled: false },
     _sum: { amount: true },
   });
-  const balance = result._sum.amount || 0;
+  const balance = result._sum.amount ?? 0;
 
   const account = await prisma.cashierAccount.findUnique({ where: { id: accountId } });
   if (!account) return;

@@ -39,9 +39,9 @@ export async function POST(request: Request) {
     const route = await prisma.route.create({
       data: {
         name,
-        mileageBefore: mileageBefore || 0,
-        mileageAfter: mileageAfter || 0,
-        targetDaily: targetDaily || 0,
+        mileageBefore: mileageBefore ?? 0,
+        mileageAfter: mileageAfter ?? 0,
+        targetDaily: targetDaily ?? 0,
       },
     });
 

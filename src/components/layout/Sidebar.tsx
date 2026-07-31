@@ -43,6 +43,7 @@ const adminNavItems: NavItem[] = [
   { label: "Driver Reports", href: "/daily-report/driver", icon: <Truck size={18} />, roles: ["ADMIN"], section: "Operations" },
   { label: "Routes", href: "/routes", icon: <Route size={18} />, roles: ["ADMIN"], section: "Manage" },
   { label: "Drivers", href: "/drivers", icon: <Users size={18} />, roles: ["ADMIN"], section: "Manage" },
+  { label: "Sales Reps", href: "/reps", icon: <Users size={18} />, roles: ["ADMIN"], section: "Manage" },
   { label: "Vehicles", href: "/vehicles", icon: <Truck size={18} />, roles: ["ADMIN"], section: "Manage" },
   { label: "Performance", href: "/performance", icon: <BarChart3 size={18} />, roles: ["ADMIN"], section: "Analytics" },
   { label: "Missing Items", href: "/missing-items", icon: <AlertTriangle size={18} />, roles: ["ADMIN"], section: "Analytics" },
@@ -50,6 +51,7 @@ const adminNavItems: NavItem[] = [
   { label: "Pricing", href: "/pricing", icon: <DollarSign size={18} />, roles: ["ADMIN"], section: "Analytics" },
   { label: "Inventory", href: "/inventory", icon: <Package size={18} />, roles: ["ADMIN"], section: "Analytics" },
   { label: "Challenges", href: "/challenges", icon: <AlertTriangle size={18} />, roles: ["ADMIN"], section: "Analytics" },
+  { label: "Audit Log", href: "/audit-log", icon: <FileText size={18} />, roles: ["ADMIN"], section: "Analytics" },
 ];
 
 const supervisorNavItems: NavItem[] = [

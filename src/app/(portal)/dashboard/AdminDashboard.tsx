@@ -19,6 +19,7 @@ import {
   Route,
 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
+import AdminCharts from "@/components/dashboard/AdminCharts";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", minimumFractionDigits: 0 }).format(n);
@@ -79,9 +80,9 @@ export default function AdminDashboard() {
 
   useEffect(() => { fetchAssignments(); }, [fetchAssignments]);
 
-  const totalSales = assignments.reduce((sum, a) => sum + (a.salesRepShift?.salesActual || 0), 0);
-  const totalCustomers = assignments.reduce((sum, a) => sum + (a.salesRepShift?.customerCountActual || 0), 0);
-  const totalComplaints = assignments.reduce((sum, a) => sum + (a.salesRepShift?.complaints || 0), 0);
+  const totalSales = assignments.reduce((sum, a) => sum + (a.salesRepShift?.salesActual ?? 0), 0);
+  const totalCustomers = assignments.reduce((sum, a) => sum + (a.salesRepShift?.customerCountActual ?? 0), 0);
+  const totalComplaints = assignments.reduce((sum, a) => sum + (a.salesRepShift?.complaints ?? 0), 0);
   const completedCount = assignments.filter((a) => a.status === "COMPLETED").length;
   const activeRoutes = new Set(assignments.map((a) => a.route.name)).size;
 
@@ -146,6 +147,8 @@ export default function AdminDashboard() {
             </div>
           ))}
         </div>
+
+        <AdminCharts assignments={assignments} profitability={null} />
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <button onClick={() => setShowCreateAssignment(true)} className="card p-4 hover:shadow-md transition-shadow text-left group">

@@ -87,9 +87,15 @@ export async function GET(request: NextRequest) {
         id: a.id,
         date: toDateKey(a.date),
         route: { id: a.route.id, name: a.route.name, targetDaily: a.route.targetDaily },
-        salesRep: { id: a.salesRep.id, name: a.salesRep.name },
-        driver: { id: a.driver.id, name: a.driver.name },
-        vehicle: { id: a.vehicle.id, registration: a.vehicle.registration },
+        salesRep: a.salesRep
+          ? { id: a.salesRep.id, name: a.salesRep.name }
+          : { id: "", name: "Unassigned" },
+        driver: a.driver
+          ? { id: a.driver.id, name: a.driver.name }
+          : { id: "", name: "Unassigned" },
+        vehicle: a.vehicle
+          ? { id: a.vehicle.id, registration: a.vehicle.registration }
+          : { id: "", registration: "—" },
         shift: {
           shiftOpen: shift?.shiftOpen?.toISOString() ?? null,
           shiftClose: shift?.shiftClose?.toISOString() ?? null,
@@ -183,8 +189,8 @@ export async function GET(request: NextRequest) {
       const r = routeMap[rid];
       r.target += cr.summary.salesTarget;
       r.actual += cr.summary.salesActual;
-      r.customerCount += (cr.kpis.find((k) => k.metric === "Customer Count")?.actual as number) || 0;
-      r.complaints += (cr.kpis.find((k) => k.metric === "Complaints")?.actual as number) || 0;
+      r.customerCount += (cr.kpis.find((k) => k.metric === "Customer Count")?.actual as number) ?? 0;
+      r.complaints += (cr.kpis.find((k) => k.metric === "Complaints")?.actual as number) ?? 0;
       r.daysActive++;
     }
 
@@ -255,10 +261,11 @@ export async function GET(request: NextRequest) {
 
     for (const a of assignments) {
       const did = a.driverId;
+      if (!did) continue;
       if (!driverMap[did]) {
         driverMap[did] = {
           driverId: did,
-          driverName: a.driver.name,
+          driverName: a.driver?.name ?? "Unassigned",
           routes: 0,
           totalCustomers: 0,
           totalReturns: 0,

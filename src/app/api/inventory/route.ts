@@ -110,8 +110,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const variance = (physicalQty || 0) - (systemQty || 0);
-    const stockValue = (physicalQty || 0) * (unitPrice || 0);
+    const variance = (physicalQty ?? 0) - (systemQty ?? 0);
+    const stockValue = (physicalQty ?? 0) * (unitPrice ?? 0);
 
     const count = await prisma.inventoryCount.create({
       data: {
@@ -119,10 +119,10 @@ export async function POST(request: NextRequest) {
         countDate: new Date(countDate),
         skuId,
         category: category || null,
-        physicalQty: physicalQty || 0,
-        systemQty: systemQty || 0,
+        physicalQty: physicalQty ?? 0,
+        systemQty: systemQty ?? 0,
         variance,
-        unitPrice: unitPrice || 0,
+        unitPrice: unitPrice ?? 0,
         stockValue,
         lastStocked: lastStocked ? new Date(lastStocked) : null,
         expiryDate: expiryDate ? new Date(expiryDate) : null,

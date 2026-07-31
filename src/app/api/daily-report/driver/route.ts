@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createNotification, createNotificationForRole } from "@/lib/notifications";
+import { driverReportSchema } from "@/lib/validations";
 
 type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -23,6 +25,12 @@ export async function POST(req: NextRequest) {
     } catch {
       return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
     }
+
+    const parsed = driverReportSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten().fieldErrors }, { status: 400 });
+    }
+
     const {
       assignmentId,
       loadingStart,
@@ -43,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     const assignment = await prisma.dailyAssignment.findUnique({
       where: { id: assignmentId },
-      include: { driverShift: true },
+      include: { driverShift: true, route: true, driver: { include: { supervisor: true } } },
     });
 
     if (!assignment) {
@@ -138,6 +146,22 @@ export async function POST(req: NextRequest) {
         data: { status: "COMPLETED" },
       });
     });
+
+    await createNotificationForRole("ADMIN", {
+      title: "Driver report submitted",
+      body: `Driver submitted report for ${assignment.route?.name || "route"}`,
+      type: "report_reminder",
+      link: `/daily-report/view?assignmentId=${assignmentId}`,
+    });
+    if (assignment.driver?.supervisor) {
+      await createNotification({
+        userId: assignment.driver.supervisor.id,
+        title: "Driver report submitted",
+        body: `${assignment.driver.name} submitted report for ${assignment.route?.name || "route"}`,
+        type: "report_reminder",
+        link: `/daily-report/view?assignmentId=${assignmentId}`,
+      });
+    }
 
     return NextResponse.json({ success: true, message: "Report saved successfully" });
   } catch {

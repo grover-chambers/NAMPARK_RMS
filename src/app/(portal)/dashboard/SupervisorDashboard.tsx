@@ -15,7 +15,9 @@ import {
   Route,
   FileText,
   BarChart3,
+  Truck,
 } from "lucide-react";
+import SupervisorCharts from "@/components/dashboard/SupervisorCharts";
 
 const fmt = (n: number) =>
   new Intl.NumberFormat("en-KE", { style: "currency", currency: "KES", minimumFractionDigits: 0 }).format(n);
@@ -35,6 +37,7 @@ interface Assignment {
 export default function SupervisorDashboard() {
   const { data: session } = useSession();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [today] = useState(new Date().toISOString().split("T")[0]);
 
@@ -42,17 +45,22 @@ export default function SupervisorDashboard() {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/assignments?startDate=${today}T00:00:00Z&endDate=${today}T23:59:59Z`);
-        const data = await res.json();
-        setAssignments(data.data || []);
+        const [assignRes, vehicleRes] = await Promise.all([
+          fetch(`/api/assignments?startDate=${today}T00:00:00Z&endDate=${today}T23:59:59Z`),
+          fetch("/api/vehicles"),
+        ]);
+        const assignData = await assignRes.json();
+        const vehicleData = await vehicleRes.json();
+        setAssignments(assignData.data || []);
+        setVehicles(Array.isArray(vehicleData) ? vehicleData : vehicleData.data || []);
       } catch { setAssignments([]); } finally { setLoading(false); }
     };
     load();
   }, [today]);
 
-  const totalSales = assignments.reduce((sum, a) => sum + (a.salesRepShift?.salesActual || 0), 0);
-  const totalCustomers = assignments.reduce((sum, a) => sum + (a.salesRepShift?.customerCountActual || 0), 0);
-  const totalComplaints = assignments.reduce((sum, a) => sum + (a.salesRepShift?.complaints || 0), 0);
+  const totalSales = assignments.reduce((sum, a) => sum + (a.salesRepShift?.salesActual ?? 0), 0);
+  const totalCustomers = assignments.reduce((sum, a) => sum + (a.salesRepShift?.customerCountActual ?? 0), 0);
+  const totalComplaints = assignments.reduce((sum, a) => sum + (a.salesRepShift?.complaints ?? 0), 0);
   const completedCount = assignments.filter((a) => a.status === "COMPLETED").length;
   const activeCount = assignments.filter((a) => a.status === "IN_PROGRESS").length;
 
@@ -85,6 +93,8 @@ export default function SupervisorDashboard() {
             </div>
           ))}
         </div>
+
+        <SupervisorCharts assignments={assignments} vehicles={vehicles} />
 
         {/* Quick links */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

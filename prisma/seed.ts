@@ -1,9 +1,31 @@
 import { PrismaClient } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
+import masterData from "./master-data.json";
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });
+
+type MasterRoute = {
+  name: string;
+  travel: number;
+  tonnage: number;
+  orderDays: string[];
+  deliveryDays: string[];
+  group: string;
+  rep: string;
+  contact: string;
+  vehicle: string;
+};
+
+function emailFromName(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, ".")
+      .replace(/^\.+|\.+$/g, "") + "@nampark.com"
+  );
+}
 
 async function main() {
   console.log("Seeding database...");
@@ -23,7 +45,7 @@ async function main() {
     },
   });
 
-  const supervisor = await prisma.user.upsert({
+  const pilotSupervisor = await prisma.user.upsert({
     where: { email: "supervisor@nampark.com" },
     update: {},
     create: {
@@ -34,64 +56,118 @@ async function main() {
     },
   });
 
-  // Create routes
-  const routesData = [
-    { name: "Gatundu", mileageBefore: 900, mileageAfter: 1450, targetDaily: 1100000 },
-    { name: "Mununga", mileageBefore: 1600, mileageAfter: 1750, targetDaily: 1100000 },
-    { name: "Molo", mileageBefore: 400, mileageAfter: 650, targetDaily: 562500 },
-    { name: "Kandara", mileageBefore: 800, mileageAfter: 1450, targetDaily: 1100000 },
-    { name: "Mataara", mileageBefore: 1200, mileageAfter: 1950, targetDaily: 1100000 },
-    { name: "Ngararia", mileageBefore: 1000, mileageAfter: 1450, targetDaily: 1100000 },
-    { name: "Majengo", mileageBefore: 400, mileageAfter: 750, targetDaily: 562500 },
-    { name: "Gakoe", mileageBefore: 1200, mileageAfter: 1650, targetDaily: 1100000 },
-  ];
-
-  const routes: Record<string, any> = {};
-  for (const r of routesData) {
-    routes[r.name] = await prisma.route.upsert({
-      where: { name: r.name },
-      update: r,
-      create: r,
-    });
-  }
-
-  // Create sales reps
-  const repsData = [
-    { name: "Nahashon Nene", email: "nene@nampark.com", routes: ["Gatundu"] },
-    { name: "Joseph Macharia", email: "macharia@nampark.com", routes: ["Mununga"] },
-    { name: "Kelvin Mwangi", email: "kelvin@nampark.com", routes: ["Molo", "Gakoe"] },
-    { name: "Matthew Rop", email: "rop@nampark.com", routes: ["Kandara"] },
-    { name: "Bernard Rono", email: "rono@nampark.com", routes: ["Mataara", "Majengo"] },
-    { name: "Elijah Kamau", email: "kamau@nampark.com", routes: ["Ngararia"] },
-  ];
-
-  const reps: Record<string, any> = {};
-  for (const r of repsData) {
+  // Create group supervisors (one per group A-G)
+  const groupSupervisorIds: Record<string, string> = {};
+  for (const [group, first] of Object.entries(masterData.groupSupervisors)) {
+    const name = first.charAt(0).toUpperCase() + first.slice(1);
     const user = await prisma.user.upsert({
-      where: { email: r.email },
+      where: { email: `${first}@nampark.com` },
       update: {},
       create: {
-        email: r.email,
-        name: r.name,
+        email: `${first}@nampark.com`,
+        name,
         password: hash,
-        role: "SALES_REP",
+        role: "SUPERVISOR",
       },
     });
-    const salesRep = await prisma.salesRep.upsert({
-      where: { userId: user.id },
-      update: {},
-      create: { userId: user.id, name: r.name },
-    });
-    reps[r.name] = salesRep;
-
-    for (const routeName of r.routes) {
-      await prisma.salesRepRoute.create({
-        data: { salesRepId: salesRep.id, routeId: routes[routeName].id },
-      });
-    }
+    groupSupervisorIds[group] = user.id;
   }
 
-  // Create drivers
+  // Create route groups
+  const routeGroups: Record<string, any> = {};
+  for (const group of ["A", "B", "C", "D", "E", "F", "G"]) {
+    routeGroups[group] = await prisma.routeGroup.upsert({
+      where: { name: group },
+      update: { supervisorId: groupSupervisorIds[group] },
+      create: { name: group, supervisorId: groupSupervisorIds[group] },
+    });
+  }
+
+  // Upsert vehicles from master data
+  const routes = masterData.routes as MasterRoute[];
+  const vehicleRegs = [...new Set(routes.map((r) => r.vehicle).filter(Boolean))];
+  const tonnageByVehicle: Record<string, number> = {};
+  for (const r of routes) {
+    if (!r.vehicle) continue;
+    tonnageByVehicle[r.vehicle] = Math.max(tonnageByVehicle[r.vehicle] || 0, r.tonnage);
+  }
+
+  const vehicles: Record<string, any> = {};
+  for (const reg of vehicleRegs) {
+    vehicles[reg] = await prisma.vehicle.upsert({
+      where: { registration: reg },
+      update: {},
+      create: {
+        registration: reg,
+        status: "ACTIVE",
+        tonnageCapacity: tonnageByVehicle[reg],
+      },
+    });
+  }
+
+  // Upsert routes from master data
+  const routeMap: Record<string, any> = {};
+  for (const r of routes) {
+    const targetDaily = r.tonnage >= 10 ? 1100000 : 562500;
+    routeMap[r.name] = await prisma.route.upsert({
+      where: { name: r.name },
+      update: {
+        tonnage: r.tonnage,
+        orderTakingDays: r.orderDays,
+        deliveryDays: r.deliveryDays,
+        groupId: routeGroups[r.group]?.id,
+        defaultVehicleId: r.vehicle ? vehicles[r.vehicle]?.id ?? null : null,
+      },
+      create: {
+        name: r.name,
+        mileageBefore: r.travel,
+        mileageAfter: r.travel,
+        targetDaily,
+        tonnage: r.tonnage,
+        orderTakingDays: r.orderDays,
+        deliveryDays: r.deliveryDays,
+        shiftType: "ONSITE",
+        groupId: routeGroups[r.group]?.id,
+        defaultVehicleId: r.vehicle ? vehicles[r.vehicle]?.id ?? null : null,
+      },
+    });
+  }
+
+  // Upsert sales reps from master data
+  const reps: Record<string, any> = {};
+  for (const r of routes) {
+    if (reps[r.rep]) continue;
+    const email = emailFromName(r.rep);
+    const supervisorId = groupSupervisorIds[r.group];
+    const user = await prisma.user.upsert({
+      where: { email },
+      update: { phone: r.contact || null },
+      create: {
+        email,
+        name: r.rep,
+        password: hash,
+        role: "SALES_REP",
+        phone: r.contact || null,
+      },
+    });
+    reps[r.rep] = await prisma.salesRep.upsert({
+      where: { userId: user.id },
+      update: { supervisorId },
+      create: { userId: user.id, name: r.rep, supervisorId },
+    });
+  }
+
+  // Link each route to its rep
+  for (const r of routes) {
+    const rep = reps[r.rep];
+    await prisma.salesRepRoute.upsert({
+      where: { salesRepId_routeId: { salesRepId: rep.id, routeId: routeMap[r.name].id } },
+      update: {},
+      create: { salesRepId: rep.id, routeId: routeMap[r.name].id },
+    });
+  }
+
+  // Create drivers (pilot set — full driver list to be provided)
   const driversData = [
     { name: "Samuel Lukayo", email: "lukayo@nampark.com", vehicle: "KDW 852B" },
     { name: "Joseph Kamau", email: "jkamau@nampark.com", vehicle: "KDN 396Q" },
@@ -113,23 +189,7 @@ async function main() {
     await prisma.driver.upsert({
       where: { userId: user.id },
       update: {},
-      create: { userId: user.id, name: d.name },
-    });
-  }
-
-  // Create vehicles
-  const vehiclesData = [
-    { registration: "KDW 852B", status: "ACTIVE" as const },
-    { registration: "KDN 396Q", status: "ACTIVE" as const },
-    { registration: "KDX 478B", status: "ACTIVE" as const },
-    { registration: "KDL 166M", status: "ACTIVE" as const },
-  ];
-
-  for (const v of vehiclesData) {
-    await prisma.vehicle.upsert({
-      where: { registration: v.registration },
-      update: v,
-      create: v,
+      create: { userId: user.id, name: d.name, supervisorId: pilotSupervisor.id },
     });
   }
 
@@ -175,29 +235,40 @@ async function main() {
   ];
 
   for (const s of skusData) {
-    await prisma.skuCatalog.create({ data: s });
+    const existingSku = await prisma.skuCatalog.findFirst({ where: { name: s.name } });
+    if (existingSku) {
+      await prisma.skuCatalog.update({
+        where: { id: existingSku.id },
+        data: { unitPrice: s.unitPrice },
+      });
+    } else {
+      await prisma.skuCatalog.create({ data: s });
+    }
   }
 
-  // Create challenges
-  const challengesData = [
-    { gap: "Delivery truck breakdown on Kandara route", whatAction: "Arrange backup vehicle from partner fleet", who: "Fleet Manager", when: "2026-06-15", resolved: true },
-    { gap: "Stock shortage of Ndovu 2kg in Molo route", whatAction: "Increase weekly allocation by 20%", who: "Warehouse", when: "2026-06-18", resolved: true },
-    { gap: "Customer complaints on expired Sugar 50kg", whatAction: "Implement FIFO check before dispatch", who: "Quality Assurance", when: "2026-06-20", resolved: false },
-    { gap: "Pricing inconsistency in Gatundu market", whatAction: "Conduct pricing survey update", who: "Nahashon Nene", when: "2026-06-22", resolved: false },
-    { gap: "Low sales in Mununga route", whatAction: "Increase route frequency and promo activity", who: "Joseph Macharia", when: "2026-07-01", resolved: false },
-  ];
+  // Create challenges (only once)
+  const challengeCount = await prisma.challenge.count();
+  if (challengeCount === 0) {
+    const challengesData = [
+      { gap: "Delivery truck breakdown on Kandara route", whatAction: "Arrange backup vehicle from partner fleet", who: "Fleet Manager", when: "2026-06-15", resolved: true },
+      { gap: "Stock shortage of Ndovu 2kg in Molo route", whatAction: "Increase weekly allocation by 20%", who: "Warehouse", when: "2026-06-18", resolved: true },
+      { gap: "Customer complaints on expired Sugar 50kg", whatAction: "Implement FIFO check before dispatch", who: "Quality Assurance", when: "2026-06-20", resolved: false },
+      { gap: "Pricing inconsistency in Gatundu market", whatAction: "Conduct pricing survey update", who: "Nahashon Nene", when: "2026-06-22", resolved: false },
+      { gap: "Low sales in Mununga route", whatAction: "Increase route frequency and promo activity", who: "Joseph Macharia", when: "2026-07-01", resolved: false },
+    ];
 
-  for (const c of challengesData) {
-    await prisma.challenge.create({
-      data: {
-        date: new Date(),
-        gap: c.gap,
-        whatAction: c.whatAction,
-        who: c.who,
-        when: new Date(c.when),
-        resolved: c.resolved,
-      },
-    });
+    for (const c of challengesData) {
+      await prisma.challenge.create({
+        data: {
+          date: new Date(),
+          gap: c.gap,
+          whatAction: c.whatAction,
+          who: c.who,
+          when: new Date(c.when),
+          resolved: c.resolved,
+        },
+      });
+    }
   }
 
   // Create cashier user
@@ -215,8 +286,10 @@ async function main() {
   // Create cashier accounts for each sales rep
   const allReps = await prisma.salesRep.findMany();
   for (const rep of allReps) {
-    await prisma.cashierAccount.create({
-      data: {
+    await prisma.cashierAccount.upsert({
+      where: { repId: rep.id },
+      update: {},
+      create: {
         repId: rep.id,
         status: "open",
         currentBalance: 0,
@@ -231,7 +304,8 @@ async function main() {
   console.log("  Admin: admin@nampark.com / admin123");
   console.log("  Supervisor: supervisor@nampark.com / password123");
   console.log("  Cashier: cashier@nampark.com / password123");
-  console.log("  Sales Reps: <name>@nampark.com / password123");
+  console.log("  Group Supervisors: julius@nampark.com, kelvin@nampark.com, nene@nampark.com, sam@nampark.com, njenga@nampark.com, martin@nampark.com, macharia@nampark.com / password123");
+  console.log("  Sales Reps: <sanitized-full-name>@nampark.com / password123");
   console.log("  Drivers: <name>@nampark.com / password123");
 }
 

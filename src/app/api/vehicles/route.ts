@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit";
 
 export async function GET() {
   try {
@@ -44,6 +45,8 @@ export async function POST(request: Request) {
         registration: registration.toUpperCase(),
       },
     });
+
+    await createAuditLog((session.user as any).id, "create", "vehicle", vehicle.id, { registration: vehicle.registration });
 
     return NextResponse.json({ success: true, vehicle });
   } catch (e: any) {

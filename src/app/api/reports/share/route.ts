@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       data: {
         token,
         reportType,
-        params: params || {},
+        params: params ?? {},
         createdBy: (session.user as any).id,
         expiresAt,
       },

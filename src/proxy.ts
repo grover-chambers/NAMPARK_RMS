@@ -12,6 +12,7 @@ const routeAccess: Record<string, Role[]> = {
   "/assignments": ["ADMIN", "SUPERVISOR"],
   "/routes": ["ADMIN"],
   "/drivers": ["ADMIN"],
+  "/reps": ["ADMIN"],
   "/vehicles": ["ADMIN", "SUPERVISOR"],
   "/performance": ["ADMIN", "SUPERVISOR"],
   "/missing-items": ["ADMIN", "SUPERVISOR", "SALES_REP"],
@@ -19,9 +20,12 @@ const routeAccess: Record<string, Role[]> = {
   "/pricing": ["ADMIN"],
   "/inventory": ["ADMIN", "SUPERVISOR"],
   "/challenges": ["ADMIN", "SUPERVISOR"],
+  "/audit-log": ["ADMIN"],
   "/settings": ["ADMIN"],
   "/cashier": ["CASHIER"],
   "/profile": ["ADMIN", "SUPERVISOR", "SALES_REP", "DRIVER", "CASHIER"],
+  "/notifications": ["ADMIN", "SUPERVISOR", "SALES_REP", "DRIVER", "CASHIER"],
+  "/driver/deliveries": ["DRIVER"],
 };
 
 function getMatchedRoute(pathname: string): string | null {
@@ -36,10 +40,10 @@ function getMatchedRoute(pathname: string): string | null {
   return null;
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  const publicPrefixes = ["/auth/login", "/api", "/_next", "/favicon"];
+  const publicPrefixes = ["/auth/login", "/api", "/_next", "/favicon", "/sw.js", "/manifest.json", "/icons"];
   if (publicPrefixes.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
@@ -64,6 +68,6 @@ export async function middleware(req: NextRequest) {
   return NextResponse.next();
 }
 
-export const config = {
+export const proxyConfig = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

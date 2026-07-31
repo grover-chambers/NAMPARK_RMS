@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions, requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit";
+import { createNotification } from "@/lib/notifications";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +42,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           ]
         : []),
     ]);
+
+    const rep = await prisma.salesRep.findUnique({
+      where: { id: account.repId },
+      select: { userId: true, name: true },
+    });
+    if (rep) {
+      await createNotification({
+        userId: rep.userId,
+        title: "Account Unblocked",
+        body: `Your cashier account has been unblocked.`,
+        type: "unblock_approved",
+        link: "/cashier/accounts",
+        push: true,
+      });
+    }
+
+    await createAuditLog(userId, "update", "account_block", id, { accountId: id, action: "unblock" });
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

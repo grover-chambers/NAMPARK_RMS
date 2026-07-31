@@ -1,0 +1,1044 @@
+{
+  "routes": [
+    {
+      "name": "KISII",
+      "travel": 700.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Tuesdays",
+        "Thursdays",
+        "Saturdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays",
+        "Sundays"
+      ],
+      "group": "A",
+      "rep": "BONIVENTURE KAPTEN WAFULA",
+      "contact": "0798399787",
+      "vehicle": "KDN 268D"
+    },
+    {
+      "name": "GITHURAI",
+      "travel": 900.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "A",
+      "rep": "BONIVENTURE KAPTEN WAFULA",
+      "contact": "0727843125",
+      "vehicle": "KDP 966T"
+    },
+    {
+      "name": "MUKURWE",
+      "travel": 1200.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Sundays",
+        "Tuesdays",
+        "Thursdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays"
+      ],
+      "group": "A",
+      "rep": "ISAACK KARIITHI WANJIRU",
+      "contact": "0717599040",
+      "vehicle": "KDP 971T"
+    },
+    {
+      "name": "GATANGA",
+      "travel": 1300.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "A",
+      "rep": "ISAACK KARIITHI WANJIRU",
+      "contact": "0717599040",
+      "vehicle": "KDP 971T"
+    },
+    {
+      "name": "MUTHITHI",
+      "travel": 1200.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Sundays",
+        "Tuesdays",
+        "Thursdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays"
+      ],
+      "group": "A",
+      "rep": "JULIUS KAIGWARA MBUTHIA",
+      "contact": "0704476367",
+      "vehicle": "KDN 349Q"
+    },
+    {
+      "name": "KENOL-MAKUYU",
+      "travel": 900.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "A",
+      "rep": "JULIUS KAIGWARA MBUTHIA",
+      "contact": "0704476367",
+      "vehicle": "KDN 349Q"
+    },
+    {
+      "name": "KAGAA-KIMOROLI ROUTE",
+      "travel": 1200.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "A",
+      "rep": "LAMECK AMBULI MAUNGU",
+      "contact": "0711368701",
+      "vehicle": "KDN 268D"
+    },
+    {
+      "name": "KAMITI ZIMMERMAN",
+      "travel": 900.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Sundays",
+        "Tuesdays",
+        "Thursdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays"
+      ],
+      "group": "A",
+      "rep": "LAMECK AMBULI MAUNGU",
+      "contact": "0792203858",
+      "vehicle": "KDP 966T"
+    },
+    {
+      "name": "MWEA KIMBIMBI",
+      "travel": 1200.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Sundays",
+        "Thursdays"
+      ],
+      "deliveryDays": [
+        "Fridays"
+      ],
+      "group": "B",
+      "rep": "KELVIN MAINA ELIZABETH",
+      "contact": "0727591748",
+      "vehicle": "KDK 583G"
+    },
+    {
+      "name": "NGILELYA",
+      "travel": 1200.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "B",
+      "rep": "KELVIN MAINA ELIZABETH",
+      "contact": "0727591748",
+      "vehicle": "KDK 583G"
+    },
+    {
+      "name": "KAMAKIS",
+      "travel": 800.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "B",
+      "rep": "PETER KAMAU MWAURA",
+      "contact": "0729009147",
+      "vehicle": "KDN 267D"
+    },
+    {
+      "name": "MUGUGA",
+      "travel": 800.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Sundays",
+        "Tuesdays",
+        "Thursdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays"
+      ],
+      "group": "B",
+      "rep": "PETER KAMAU MWAURA",
+      "contact": "0729009147",
+      "vehicle": "KDN 267D"
+    },
+    {
+      "name": "MALAA- KAMULU",
+      "travel": 1200.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Sundays",
+        "Tuesdays",
+        "Thursdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays"
+      ],
+      "group": "B",
+      "rep": "SAMUEL KIBE MWAURA",
+      "contact": "0728600363",
+      "vehicle": "KDN 212D"
+    },
+    {
+      "name": "RUAI JOSKA",
+      "travel": 1200.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "B",
+      "rep": "SAMUEL KIBE MWAURA",
+      "contact": "0728600363",
+      "vehicle": "KDN 212D"
+    },
+    {
+      "name": "GITHUNGURI",
+      "travel": 1200.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "B",
+      "rep": "TIMOTHY KINOTI KOBIA",
+      "contact": "0711948212",
+      "vehicle": "KDL 183M"
+    },
+    {
+      "name": "KIRERE MARIRA",
+      "travel": 1000.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Tuesdays",
+        "Thursdays",
+        "Saturdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays",
+        "Sundays"
+      ],
+      "group": "B",
+      "rep": "TIMOTHY KINOTI KOBIA",
+      "contact": "0711948212",
+      "vehicle": "KDL 183M"
+    },
+    {
+      "name": "GITHUMU",
+      "travel": 1300.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "C",
+      "rep": "MUTWIRI JOSHUA",
+      "contact": "0700289609",
+      "vehicle": "KDL 166M"
+    },
+    {
+      "name": "GATUNDU",
+      "travel": 1450.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Tuesdays",
+        "Thursdays",
+        "Saturdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays",
+        "Sundays"
+      ],
+      "group": "C",
+      "rep": "NENE NAHASHON MWAURA",
+      "contact": "0719386239",
+      "vehicle": "KDL 166M"
+    },
+    {
+      "name": "NDAKAINI KIMANDI",
+      "travel": 1300.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Tuesdays",
+        "Thursdays",
+        "Saturdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays",
+        "Sundays"
+      ],
+      "group": "C",
+      "rep": "MUTWIRI JOSHUA",
+      "contact": "0700289609",
+      "vehicle": "KDP 964T"
+    },
+    {
+      "name": "MASTOO",
+      "travel": 800.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "C",
+      "rep": "SIMON MIGWI NGUGI",
+      "contact": "0790898342",
+      "vehicle": "KDP 964T"
+    },
+    {
+      "name": "MUDORO",
+      "travel": 900.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "C",
+      "rep": "NENE NAHASHON MWAURA",
+      "contact": "0719386239",
+      "vehicle": "KDV 615S"
+    },
+    {
+      "name": "MALABA NYACHAFA",
+      "travel": 700.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Tuesdays",
+        "Thursdays",
+        "Saturdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays",
+        "Sundays"
+      ],
+      "group": "C",
+      "rep": "SIMON MIGWI NGUGI",
+      "contact": "0790898342",
+      "vehicle": "KDV 615S"
+    },
+    {
+      "name": "MAKONGENI",
+      "travel": 400.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Sundays",
+        "Tuesdays",
+        "Thursdays"
+      ],
+      "deliveryDays": [
+        "Mondays"
+      ],
+      "group": "C",
+      "rep": "BETT BISMARK KIPRONO",
+      "contact": "0727843125",
+      "vehicle": "KDW 851B"
+    },
+    {
+      "name": "WITEITHIE",
+      "travel": 400.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "C",
+      "rep": "BETT BISMARK KIPRONO",
+      "contact": "0704665968",
+      "vehicle": "KDW 851B"
+    },
+    {
+      "name": "NDUNYU CHEGE",
+      "travel": 1300.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Tuesdays",
+        "Thursdays",
+        "Saturdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays",
+        "Sundays"
+      ],
+      "group": "D",
+      "rep": "MURIUKI ERICK",
+      "contact": "0798763709",
+      "vehicle": "KDM 268U"
+    },
+    {
+      "name": "SABASABA",
+      "travel": 1200.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "D",
+      "rep": "MURIUKI ERICK",
+      "contact": "0798763709",
+      "vehicle": "KDM 268U"
+    },
+    {
+      "name": "TALA",
+      "travel": 1400.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Tuesdays",
+        "Thursdays",
+        "Saturdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays",
+        "Sundays"
+      ],
+      "group": "D",
+      "rep": "ELIJAH KAMAU MWANGI",
+      "contact": "0115418033",
+      "vehicle": "KDP 486T"
+    },
+    {
+      "name": "KIAMBU-GITHIGA",
+      "travel": 1200.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "D",
+      "rep": "SAMUEL MAINA NJOKI",
+      "contact": "0714247455",
+      "vehicle": "KDP 486T"
+    },
+    {
+      "name": "NGARARIA",
+      "travel": 1450.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "D",
+      "rep": "ELIJAH KAMAU MWANGI",
+      "contact": "0115418033",
+      "vehicle": "KDV 920U"
+    },
+    {
+      "name": "KANDARA",
+      "travel": 1450.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Tuesdays",
+        "Thursdays",
+        "Saturdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays",
+        "Sundays"
+      ],
+      "group": "D",
+      "rep": "SAMUEL MAINA NJOKI",
+      "contact": "0714247455",
+      "vehicle": "KDV 920U"
+    },
+    {
+      "name": "MAJENGO-ATHENA",
+      "travel": 750.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Tuesdays",
+        "Thursdays",
+        "Saturdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays",
+        "Sundays"
+      ],
+      "group": "D",
+      "rep": "BENARD RONO KIPTOO",
+      "contact": "0701422800",
+      "vehicle": "KDW 852B"
+    },
+    {
+      "name": "MOLO",
+      "travel": 550.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "D",
+      "rep": "BENARD RONO KIPTOO",
+      "contact": "0746054334",
+      "vehicle": "KDW 852B"
+    },
+    {
+      "name": "SABKA",
+      "travel": 500.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Sundays",
+        "Tuesdays",
+        "Thursdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays"
+      ],
+      "group": "E",
+      "rep": "LANGAT TIMOTHY KIPKORIR",
+      "contact": "0740382423",
+      "vehicle": "KDN 134D"
+    },
+    {
+      "name": "NGOINGWA",
+      "travel": 700.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "E",
+      "rep": "ONESMUS NJENGA NJOROGE",
+      "contact": "0798399787",
+      "vehicle": "KDN 134D"
+    },
+    {
+      "name": "NDARASHA-MURERA",
+      "travel": 800.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "E",
+      "rep": "JOHN KARANJA THUO",
+      "contact": "0718150164",
+      "vehicle": "KDP 951T"
+    },
+    {
+      "name": "KIMBO_MATANGI",
+      "travel": 1200.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Sundays",
+        "Tuesdays",
+        "Thursdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays"
+      ],
+      "group": "E",
+      "rep": "ONESMUS NJENGA NJOROGE",
+      "contact": "0704665968",
+      "vehicle": "KDP 951T"
+    },
+    {
+      "name": "MAGANJO KOMO  EXPRESS",
+      "travel": 1200.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Tuesdays",
+        "Thursdays",
+        "Saturdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays",
+        "Sundays"
+      ],
+      "group": "E",
+      "rep": "MARTIN MWIRIGI MUTWIRI",
+      "contact": "0703380168",
+      "vehicle": "KDW 237B"
+    },
+    {
+      "name": "MARAGUA",
+      "travel": 1200.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "E",
+      "rep": "MARTIN MWIRIGI MUTWIRI",
+      "contact": "0703380168",
+      "vehicle": "KDW 237B"
+    },
+    {
+      "name": "KIGANJO THIKA",
+      "travel": 500.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Sundays",
+        "Tuesdays",
+        "Thursdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays"
+      ],
+      "group": "E",
+      "rep": "JOHN KARANJA THUO",
+      "contact": "0718150164",
+      "vehicle": "KDW 873B"
+    },
+    {
+      "name": "JUJA",
+      "travel": 800.0,
+      "tonnage": 5.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "E",
+      "rep": "LANGAT TIMOTHY KIPKORIR",
+      "contact": "0740382423",
+      "vehicle": "KDW 873B"
+    },
+    {
+      "name": "NDUNYU SABUK",
+      "travel": 1200.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Saturdays"
+      ],
+      "deliveryDays": [
+        "Sundays"
+      ],
+      "group": "F",
+      "rep": "JOHN WACHANIA GICHUKI",
+      "contact": "0790923465",
+      "vehicle": ""
+    },
+    {
+      "name": "KYELENI",
+      "travel": 1300.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Sundays",
+        "Tuesdays",
+        "Thursdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays"
+      ],
+      "group": "F",
+      "rep": "LAWRENCE MWANGI MUTHONI",
+      "contact": "0705937611",
+      "vehicle": "KDH 271M"
+    },
+    {
+      "name": "KANGARI",
+      "travel": 1200.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "F",
+      "rep": "JOHN WACHANIA GICHUKI",
+      "contact": "0792203858",
+      "vehicle": "KDH 271M"
+    },
+    {
+      "name": "KAGUKU",
+      "travel": 1300.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Tuesdays",
+        "Thursdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Saturdays"
+      ],
+      "group": "F",
+      "rep": "JOHN WACHANIA GICHUKI",
+      "contact": "0790923465",
+      "vehicle": "KDK582G"
+    },
+    {
+      "name": "KARANGI GATUNYU",
+      "travel": 1600.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "F",
+      "rep": "LAWRENCE MWANGI MUTHONI",
+      "contact": "0705937611",
+      "vehicle": "KDK582G"
+    },
+    {
+      "name": "GAKOE",
+      "travel": 1650.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Sundays",
+        "Tuesdays",
+        "Thursdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays"
+      ],
+      "group": "F",
+      "rep": "KELVIN MWANGI KARIUKI",
+      "contact": "0746054334",
+      "vehicle": "KDN 396Q"
+    },
+    {
+      "name": "MATAARA",
+      "travel": 1950.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "F",
+      "rep": "KELVIN MWANGI KARIUKI",
+      "contact": "0701422800",
+      "vehicle": "KDN 396Q"
+    },
+    {
+      "name": "KIRIAINI-KANGEMA",
+      "travel": 1300.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "F",
+      "rep": "HARRISON NJOROGE WAIYA",
+      "contact": "0759254504",
+      "vehicle": "KDW 855B"
+    },
+    {
+      "name": "MUTHAIGA",
+      "travel": 700.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Sundays",
+        "Tuesdays",
+        "Thursdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays"
+      ],
+      "group": "F",
+      "rep": "HARRISON NJOROGE WAIYA",
+      "contact": "0759254504",
+      "vehicle": "KDW 855B"
+    },
+    {
+      "name": "RUIRU-KAHAWA WEST",
+      "travel": 1200.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "G",
+      "rep": "ROBERT KIPKEMBOI CHEBOR",
+      "contact": "0729561833",
+      "vehicle": "KDN 389Q"
+    },
+    {
+      "name": "KITULUNI KISKYONI",
+      "travel": 1500.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Sundays",
+        "Tuesdays",
+        "Thursdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays"
+      ],
+      "group": "G",
+      "rep": "ROBERT KIPKEMBOI CHEBOR",
+      "contact": "0729561833",
+      "vehicle": "KDN 389Q"
+    },
+    {
+      "name": "KAYOLE MAKUYU",
+      "travel": 1200.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Sundays",
+        "Tuesdays",
+        "Thursdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays"
+      ],
+      "group": "G",
+      "rep": "SAMUEL MUTHINI MUSYOKA",
+      "contact": "0701119045",
+      "vehicle": "KDP 961T"
+    },
+    {
+      "name": "NEW KIRIAINI EXPRESS",
+      "travel": 1300.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "G",
+      "rep": "SAMUEL MUTHINI MUSYOKA",
+      "contact": "0701119045",
+      "vehicle": "KDP 961T"
+    },
+    {
+      "name": "MAGUGUNI",
+      "travel": 800.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Tuesdays",
+        "Thursdays",
+        "Saturdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays",
+        "Sundays"
+      ],
+      "group": "G",
+      "rep": "BRIAN MALIHA OMOKA",
+      "contact": "0759280295",
+      "vehicle": "KDP 972T"
+    },
+    {
+      "name": "MAKWA-MANGU",
+      "travel": 1500.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "G",
+      "rep": "BRIAN MALIHA OMOKA",
+      "contact": "0759280295",
+      "vehicle": "KDP 972T"
+    },
+    {
+      "name": "KABATI THIKA",
+      "travel": 1200.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Tuesdays",
+        "Thursdays",
+        "Saturdays"
+      ],
+      "deliveryDays": [
+        "Wednesdays",
+        "Fridays",
+        "Sundays"
+      ],
+      "group": "G",
+      "rep": "JOSEPH MACHARIA WARUIRU",
+      "contact": "0702896593",
+      "vehicle": "KDP 973T"
+    },
+    {
+      "name": "MUNUNGA",
+      "travel": 1750.0,
+      "tonnage": 10.0,
+      "orderDays": [
+        "Mondays",
+        "Wednesdays",
+        "Fridays"
+      ],
+      "deliveryDays": [
+        "Thursdays",
+        "Saturdays"
+      ],
+      "group": "G",
+      "rep": "JOSEPH MACHARIA WARUIRU",
+      "contact": "0702896593",
+      "vehicle": "KDP 973T"
+    }
+  ],
+  "groupSupervisors": {
+    "A": "julius",
+    "B": "kelvin",
+    "C": "nene",
+    "D": "sam",
+    "E": "njenga",
+    "F": "martin",
+    "G": "macharia"
+  }
+}
