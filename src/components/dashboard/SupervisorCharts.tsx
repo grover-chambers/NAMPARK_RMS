@@ -8,9 +8,9 @@ interface Assignment {
   date: string;
   status: string;
   route: { name: string };
-  salesRep: { name: string };
-  driver: { name: string };
-  vehicle: { registration: string };
+  salesRep: { name: string } | null;
+  driver: { name: string } | null;
+  vehicle: { registration: string } | null;
   salesRepShift?: { salesActual: number; customerCountActual: number; complaints: number } | null;
 }
 

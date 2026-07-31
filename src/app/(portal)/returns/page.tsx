@@ -273,7 +273,7 @@ export default function ReturnsPage() {
                 items.map((item) => (
                   <tr key={item.id} className="hover:bg-slate-50/50">
                     <td className="table-cell text-sm">{formatDate(item.createdAt)}</td>
-                    <td className="table-cell">{item.driverShift.assignment.driver.name}</td>
+                    <td className="table-cell">{item.driverShift.assignment.driver?.name ?? "—"}</td>
                     <td className="table-cell">{item.driverShift.assignment.route.name}</td>
                     <td className="table-cell font-medium">{item.sku.name}</td>
                     <td className="table-cell">

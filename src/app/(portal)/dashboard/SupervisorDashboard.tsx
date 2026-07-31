@@ -28,9 +28,9 @@ interface Assignment {
   date: string;
   status: string;
   route: { name: string };
-  salesRep: { name: string };
-  driver: { name: string };
-  vehicle: { registration: string };
+  salesRep: { name: string } | null;
+  driver: { name: string } | null;
+  vehicle: { registration: string } | null;
   salesRepShift?: { salesActual: number; customerCountActual: number; complaints: number; returnsCount: number } | null;
 }
 
@@ -150,9 +150,9 @@ export default function SupervisorDashboard() {
                   {assignments.map((a) => (
                     <tr key={a.id} className="border-b border-slate-50 hover:bg-slate-50/50">
                       <td className="table-cell font-medium">{a.route.name}</td>
-                      <td className="table-cell">{a.salesRep.name}</td>
-                      <td className="table-cell">{a.driver.name}</td>
-                      <td className="table-cell font-mono text-xs">{a.vehicle.registration}</td>
+                      <td className="table-cell">{a.salesRep?.name ?? "—"}</td>
+                      <td className="table-cell">{a.driver?.name ?? "—"}</td>
+                      <td className="table-cell font-mono text-xs">{a.vehicle?.registration ?? "—"}</td>
                       <td className="table-cell font-medium">{a.salesRepShift ? fmt(a.salesRepShift.salesActual) : "—"}</td>
                       <td className="table-cell">
                         {a.salesRepShift?.complaints ? (
