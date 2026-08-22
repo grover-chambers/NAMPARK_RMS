@@ -3,8 +3,8 @@ import { createHash } from "crypto";
 import { prisma } from "@/lib/prisma";
 import {
   resolveActiveTenant,
+  computeDailyModuleMetrics,
   computeWeeklyModuleMetrics,
-  mondayOf,
   formatWeek,
 } from "@/lib/modules/route-mapping";
 
@@ -44,7 +44,7 @@ function uuidV5(name: string, namespaceHex: string): string {
 interface PushResult {
   tenantId: string;
   eventId: string;
-  weekStart: string;
+  period: string;
   status: number | null;
   duplicate: boolean;
   ok: boolean;
@@ -90,23 +90,24 @@ export async function GET(req: Request) {
     });
   }
 
-  // Last COMPLETED week (same convention as weekly-snapshot cron)
+  // Nightly cadence (access-overview spec §2): push YESTERDAY's completed
+  // day as one snapshot event. event_id is deterministic per day, so cron
+  // retries within the same day dedupe on PlayMax's ledger.
   const now = new Date();
-  const thisMonday = mondayOf(now);
-  const lastWeekStart = new Date(thisMonday);
-  lastWeekStart.setUTCDate(lastWeekStart.getUTCDate() - 7);
+  const yesterday = new Date(now);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  const periodDate = formatWeek(yesterday); // YYYY-MM-DD of the covered day
 
-  const metrics = await computeWeeklyModuleMetrics(tenant.id, lastWeekStart);
+  const metrics = await computeDailyModuleMetrics(tenant.id, yesterday);
   if (metrics.length === 0) {
     return NextResponse.json({
       ok: true,
       pushed: false,
-      reason: `No assignments for week ${formatWeek(lastWeekStart)}`,
+      reason: `No assignments for ${periodDate}`,
     });
   }
 
-  const weekStartStr = formatWeek(lastWeekStart);
-  const eventId = uuidV5(`${tenant.id}:${weekStartStr}`, UUID_NAMESPACE);
+  const eventId = uuidV5(`${tenant.id}:${periodDate}`, UUID_NAMESPACE);
   const occurredAt = new Date().toISOString();
 
   let status: number | null = null;
@@ -128,7 +129,7 @@ export async function GET(req: Request) {
         client_id: tenant.externalClientId,
         event_type: "route_metrics",
         occurred_at: occurredAt,
-        period_label: `Week of ${weekStartStr}`,
+        period_label: periodDate,
         metrics,
       }),
       signal: AbortSignal.timeout(15000),
@@ -155,7 +156,7 @@ export async function GET(req: Request) {
       id: eventId,
       tenantId: tenant.id,
       entityType: "module_push",
-      entityId: weekStartStr,
+      entityId: periodDate,
       operationType: "create",
       payload: { metricsCount: metrics.length, occurredAt },
       resultRef: { status, duplicate, ok, reason: reason ?? null },
@@ -170,7 +171,7 @@ export async function GET(req: Request) {
   const result: PushResult = {
     tenantId: tenant.id,
     eventId,
-    weekStart: weekStartStr,
+    period: periodDate,
     status,
     duplicate,
     ok,

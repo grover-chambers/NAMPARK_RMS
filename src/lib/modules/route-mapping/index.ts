@@ -77,9 +77,48 @@ export async function computeWeeklyModuleMetrics(
   const weekStart = mondayOf(weekStartDate);
   const weekEnd = new Date(weekStart);
   weekEnd.setUTCDate(weekEnd.getUTCDate() + 7);
+  return computeModuleMetrics(tenantId, weekStart, weekEnd, formatWeek(weekStart));
+}
+
+/** UTC midnight of the day containing `date`. */
+function utcDay(date: Date): Date {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  );
+}
+
+/**
+ * Daily route-mapping summary — the nightly push cadence (access-overview
+ * spec §2). One metric snapshot event per day; event_id dedupes per day.
+ */
+export async function computeDailyModuleMetrics(
+  tenantId: string,
+  day: Date,
+): Promise<ModuleMetric[]> {
+  const dayStart = utcDay(day);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setUTCDate(dayEnd.getUTCDate() + 1);
+  return computeModuleMetrics(tenantId, dayStart, dayEnd, formatWeek(dayStart));
+}
+
+/**
+ * Route-mapping summary for a [start, end) window, matching the PlayMax
+ * ingest metric contract. Null-valued financials (pending SKU pricing) are
+ * omitted rather than sent as zero — PlayMax report_metrics requires numeric
+ * values.
+ *
+ * Aggregation mirrors src/app/api/reports/profitability/route.ts and reuses
+ * its computeProfitability engine unchanged.
+ */
+async function computeModuleMetrics(
+  tenantId: string,
+  windowStart: Date,
+  windowEnd: Date,
+  periodLabel: string,
+): Promise<ModuleMetric[]> {
 
   const assignments = await prisma.dailyAssignment.findMany({
-    where: { tenantId, date: { gte: weekStart, lt: weekEnd } },
+    where: { tenantId, date: { gte: windowStart, lt: windowEnd } },
     select: {
       id: true,
       status: true,
@@ -170,7 +209,7 @@ export async function computeWeeklyModuleMetrics(
     const result = computeProfitability({
       routeId,
       routeName,
-      weekStart: formatWeek(weekStart),
+      weekStart: periodLabel,
       orders: orders as Parameters<typeof computeProfitability>[0]["orders"],
       driverShifts,
       returnsTotal,
