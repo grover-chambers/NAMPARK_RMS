@@ -116,3 +116,39 @@ Business data belonging to one operation/tenant:
 - No query changes anywhere — risk of regression on a live system stays zero.
 - No Supabase/Auth.js dependency introduced into NAMPARK.
 - No data copied out of NAMPARK (PlayMax receives summary events only).
+
+## 7. Deferred decisions (v2 backlog) — logged, not built
+
+Scope calibration (arch review pushback): this is a one-person team shipping
+for a client base of one. Only cheap-to-do-right-now / expensive-to-retrofit
+items were built (tenant indirection, idempotency keys). The rest are
+**explicit decisions to make later**, recorded here so they are not
+accidentally re-litigated:
+
+| Decision | When needed | Notes |
+|---|---|---|
+| Mobile auth token strategy | Kanini onboarding (step 4) | JWT access+refresh vs opaque tokens vs NextAuth cookie reuse. Decide with real device constraints in hand. Rep accounts already exist as User+SalesRep rows. |
+| Device registration build-out | Step 4 | `Device` table exists; API + revocation flows deferred until there is a device fleet. |
+| `/api/v1` versioning | First mobile endpoint shipped | Folder rename at that point; nothing public exists yet to break. |
+| Integration Layer abstraction | Second client OR second module type | Current: one service module + one cron route + PlayMax's ledger/gate. Extract a framework only when the second instance shows the shape. |
+| PostGIS + GPS retention policy | When `rep_location_events` exceeds ~10M rows | Table is isolated; aggregation/rollup can land without migration pain. Nice_OS reference: `visits.gps_*` pattern. |
+| Per-user tenant binding (multi-tenant ops) | Second tenant activation | `resolveActiveTenant()` currently fails closed on ambiguity by design. |
+
+## 8. Reference assets from Nice_OS (step 4 prep)
+
+Audited 2026-08-22 (read-only). No license file exists; code is internal/
+proprietary — extraction for the same owner is fine.
+
+Ranked port candidates for the Kanini rep app:
+1. **Sync queue** — `mobile/niceos_app/lib/services/sync_service.dart` (~153 LOC,
+   Hive-backed, parent-before-child push order, failed items stay queued) +
+   server-side `sync_apply(p_entity, p_rows)` RPC idea.
+2. **GPS stabilisation** — `lib/services/location_service.dart::stabiliseFixes()`
+   (multi-sample average, 10 m haversine tolerance over 15 s).
+3. **Schema shapes** — Nice_OS migrations for `visits`, `retailers`,
+   `routes`/`route_stops` are production-shaped references for NAMPARK phase-3
+   customer/visit tables.
+4. **Hive box-per-domain convention** — census/submission/intercept providers.
+5. **Fail-closed boot config gate** — `main.dart` env validation screen.
+
+Absent in Nice_OS: working OTP flow (stubbed), SQLite/drift layer, any LICENSE.
