@@ -98,6 +98,12 @@ model RouteGroup {
   supervisor User    @relation("GroupSupervisor", fields: [supervisorId], references: [id])
   routes     Route[]
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
+
   @@map("route_groups")
 }
 
@@ -128,6 +134,12 @@ model Route {
   creditSales        CreditSale[]
   weeklyProfitabilitySnapshots WeeklyProfitabilitySnapshot[]
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
+
   @@index([groupId])
   @@index([defaultVehicleId])
   @@map("routes")
@@ -147,6 +159,12 @@ model SalesRep {
   routes            SalesRepRoute[]
   cashierAccount    CashierAccount?
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
+
   @@index([supervisorId])
   @@map("sales_reps")
 }
@@ -157,6 +175,12 @@ model SalesRepRoute {
   routeId     String
   salesRep    SalesRep @relation(fields: [salesRepId], references: [id], onDelete: Cascade)
   route       Route    @relation(fields: [routeId], references: [id], onDelete: Cascade)
+
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
 
   @@unique([salesRepId, routeId])
   @@map("sales_rep_routes")
@@ -172,6 +196,12 @@ model Driver {
   supervisor   User?     @relation("SupervisorDriver", fields: [supervisorId], references: [id])
 
   assignments       DailyAssignment[]
+
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
 
   @@index([supervisorId])
   @@map("drivers")
@@ -192,6 +222,12 @@ model Vehicle {
   maintenanceEvents VehicleMaintenanceEvent[]
   defaultForRoutes  Route[]
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
+
   @@map("vehicles")
 }
 
@@ -208,6 +244,12 @@ model VehicleFixedCost {
   createdAt   DateTime  @default(now())
 
   vehicle     Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
 
   @@index([vehicleId])
   @@map("vehicle_fixed_costs")
@@ -228,6 +270,12 @@ model VehicleMaintenanceEvent {
 
   vehicle       Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
+
   @@index([vehicleId])
   @@index([date])
   @@map("vehicle_maintenance_events")
@@ -246,6 +294,12 @@ model PayrollCost {
   paidDate    DateTime?
   notes       String?
   createdAt   DateTime  @default(now())
+
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
 
   @@index([role])
   @@index([month])
@@ -271,6 +325,12 @@ model SkuCatalog {
   pricingSurveys    PricingSurvey[]
   inventoryCounts   InventoryCount[]
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
+
   @@map("sku_catalog")
 }
 
@@ -294,6 +354,12 @@ model DailyAssignment {
   driverShift   DriverShift?
   orders        Order[]
   missingItems  MissingItem[]
+
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
 
   @@unique([date, routeId])
   @@index([date])
@@ -325,6 +391,12 @@ model SalesRepShift {
   createdAt             DateTime  @default(now())
 
   assignment            DailyAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
 
   @@map("sales_rep_shifts")
 }
@@ -358,6 +430,12 @@ model DriverShift {
   deliveryStops       DeliveryStop[]
   returns             Return[]
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
+
   @@map("driver_shifts")
 }
 
@@ -371,6 +449,12 @@ model Order {
   assignment    DailyAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
   lines         OrderLine[]
   deliveryStop  DeliveryStop?
+
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
 
   @@index([assignmentId])
   @@index([customerName])
@@ -388,6 +472,12 @@ model OrderLine {
   order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
   sku       SkuCatalog @relation(fields: [skuId], references: [id])
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
+
   @@map("order_lines")
 }
 
@@ -401,6 +491,12 @@ model DeliveryStop {
 
   order       Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
   driverShift DriverShift     @relation(fields: [driverShiftId], references: [id], onDelete: Cascade)
+
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
 
   @@map("delivery_stops")
 }
@@ -426,6 +522,12 @@ model MissingItem {
   sku                   SkuCatalog @relation(fields: [skuId], references: [id])
   route                 Route     @relation(fields: [routeId], references: [id])
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
+
   @@index([date])
   @@index([routeId])
   @@index([week])
@@ -447,6 +549,12 @@ model Return {
   driverShift     DriverShift   @relation(fields: [driverShiftId], references: [id], onDelete: Cascade)
   sku             SkuCatalog    @relation(fields: [skuId], references: [id])
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
+
   @@map("returns")
 }
 
@@ -467,6 +575,12 @@ model FleetDaily {
 
   vehicle             Vehicle   @relation(fields: [vehicleId], references: [id])
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
+
   @@unique([date, vehicleId])
   @@map("fleet_daily")
 }
@@ -482,6 +596,12 @@ model VehicleInspection {
   createdAt   DateTime      @default(now())
 
   vehicle     Vehicle       @relation(fields: [vehicleId], references: [id])
+
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
 
   @@map("vehicle_inspections")
 }
@@ -502,6 +622,12 @@ model PricingSurvey {
   salesRep          SalesRep  @relation(fields: [salesRepId], references: [id])
   sku               SkuCatalog @relation(fields: [skuId], references: [id])
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
+
   @@map("pricing_surveys")
 }
 
@@ -515,6 +641,12 @@ model Challenge {
   resolved    Boolean   @default(false)
   resolvedAt  DateTime?
   createdAt   DateTime  @default(now())
+
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
 
   @@map("challenges")
 }
@@ -537,6 +669,12 @@ model InventoryCount {
 
   sku             SkuCatalog @relation(fields: [skuId], references: [id])
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
+
   @@map("inventory_counts")
 }
 
@@ -548,6 +686,12 @@ model ShareToken {
   createdBy   String
   expiresAt   DateTime
   createdAt   DateTime @default(now())
+
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
 
   @@map("share_tokens")
 }
@@ -571,6 +715,11 @@ model CashierAccount {
   openLogs                AccountOpenLog[]
   alerts                  AccountAlert[]
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+
   @@map("cashier_accounts")
 }
 
@@ -589,6 +738,12 @@ model CreditSale {
   account         CashierAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   route           Route          @relation(fields: [routeId], references: [id])
   blockEvents     AccountBlockEvent[]
+
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
 
   @@index([accountId])
   @@index([settled])
@@ -612,6 +767,12 @@ model AccountBlockEvent {
   blockedByCashier      User?          @relation("BlockEventCashier", fields: [blockedByCashierId], references: [id])
   relatedCreditSale     CreditSale?    @relation(fields: [relatedCreditSaleId], references: [id])
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
+
   @@index([accountId])
   @@map("account_block_events")
 }
@@ -633,6 +794,12 @@ model AccountUnblockRequest {
   requestedByRep        User           @relation("RequestByRep", fields: [requestedByRepId], references: [id])
   reviewedByCashier     User?          @relation("ReviewRequestCashier", fields: [reviewedByCashierId], references: [id])
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
+
   @@index([accountId])
   @@index([status])
   @@map("account_unblock_requests")
@@ -648,6 +815,12 @@ model AccountOpenLog {
   createdAt             DateTime  @default(now())
 
   account               CashierAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
 
   @@index([accountId])
   @@map("account_open_log")
@@ -666,6 +839,12 @@ model AccountAlert {
 
   account                     CashierAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
   acknowledgedByCashier       User?          @relation("AlertCashier", fields: [acknowledgedByCashierId], references: [id])
+
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
 
   @@index([accountId])
   @@index([acknowledged])
@@ -688,6 +867,12 @@ model WeeklyProfitabilitySnapshot {
   frozenAt                      DateTime  @default(now())
 
   route                         Route     @relation(fields: [routeId], references: [id])
+
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
 
   @@unique([routeId, weekStart])
   @@map("weekly_profitability_snapshots")
@@ -733,6 +918,12 @@ model AuditLog {
   details    Json?
   createdAt  DateTime @default(now())
 
+
+  // ── tenancy (phase 1: nullable, unenforced) ──
+  tenantId String?
+  tenant   Tenant? @relation(fields: [tenantId], references: [id])
+  updatedAt DateTime @updatedAt
+
   @@index([userId])
   @@index([entityType, entityId])
   @@index([action])
@@ -749,4 +940,124 @@ model NotificationPreference {
   @@unique([userId, type])
   @@index([userId])
   @@map("notification_preferences")
+}
+
+// ─────────────────────────────────────────────────────────
+// Tenancy + Route-Mapping module foundation (phase 1)
+// See docs/TENANT_MIGRATION_PLAN.md
+// ─────────────────────────────────────────────────────────
+
+model Tenant {
+  id               String   @id @default(cuid())
+  externalClientId String?  @unique // PlayMax clients.id — set at module activation
+  name             String   @unique
+  status           String   @default("active") // active | paused | disabled
+  ingestUrl        String? // PlayMax module ingest endpoint, per tenant override
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  routeGroups              RouteGroup[]
+  routes                   Route[]
+  salesReps                SalesRep[]
+  salesRepRoutes           SalesRepRoute[]
+  drivers                  Driver[]
+  vehicles                 Vehicle[]
+  vehicleFixedCosts        VehicleFixedCost[]
+  vehicleMaintenanceEvents VehicleMaintenanceEvent[]
+  payrollCosts             PayrollCost[]
+  skuCatalog               SkuCatalog[]
+  dailyAssignments         DailyAssignment[]
+  salesRepShifts           SalesRepShift[]
+  driverShifts             DriverShift[]
+  orders                   Order[]
+  orderLines               OrderLine[]
+  deliveryStops            DeliveryStop[]
+  missingItems             MissingItem[]
+  returns                  Return[]
+  fleetDaily               FleetDaily[]
+  vehicleInspections       VehicleInspection[]
+  pricingSurveys           PricingSurvey[]
+  challenges               Challenge[]
+  inventoryCounts          InventoryCount[]
+  shareTokens              ShareToken[]
+  cashierAccounts          CashierAccount[]
+  creditSales              CreditSale[]
+  accountBlockEvents       AccountBlockEvent[]
+  accountUnblockRequests   AccountUnblockRequest[]
+  accountOpenLogs          AccountOpenLog[]
+  accountAlerts            AccountAlert[]
+  weeklyProfitabilitySnapshots WeeklyProfitabilitySnapshot[]
+  auditLogs                AuditLog[]
+
+  devices          Device[]
+  syncOperations   SyncOperation[]
+  locationEvents   RepLocationEvent[]
+
+  @@map("tenants")
+}
+
+// Field device registry (review §14) — revocation, versioning, push.
+model Device {
+  id         String    @id @default(cuid())
+  tenantId   String
+  repId      String? // owning sales rep, if assigned
+  deviceId   String    @unique // client-generated stable UUID
+  platform   String? // "android" | "ios"
+  osVersion  String?
+  appVersion String?
+  pushToken  String?
+  status     String    @default("active") // active | revoked
+  lastSeenAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, status])
+  @@map("devices")
+}
+
+// Idempotent offline-sync ledger (review §7).
+// PK is the CLIENT-generated operation UUID: a retried upload collides on the
+// primary key and the server answers with the original result — never a dup.
+model SyncOperation {
+  id            String   @id // operation_id from device
+  tenantId      String
+  repId         String?
+  deviceId      String?
+  entityType    String // "visit" | "order" | "location_batch" | ...
+  entityId      String?
+  operationType String   @default("create") // create | update
+  payload       Json     @default("{}")
+  resultRef     Json? // server-assigned ids after processing
+  syncedAt      DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, syncedAt])
+  @@index([repId])
+  @@map("sync_operations")
+}
+
+// GPS breadcrumbs (review §8) — dedicated high-volume subsystem.
+// Never joined casually; retention policy + aggregation land in phase 4.
+model RepLocationEvent {
+  id              String   @id @default(cuid())
+  tenantId        String
+  repId           String
+  routeId         String?
+  latitude        Float
+  longitude       Float
+  accuracyMeters  Float?
+  speedKph        Float?
+  headingDeg      Float?
+  recordedAt      DateTime // device clock when fix was taken
+  deviceTimestamp DateTime? // raw device timestamp as sent
+  receivedAt      DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id])
+
+  @@index([tenantId, repId, recordedAt])
+  @@index([routeId, recordedAt])
+  @@map("rep_location_events")
 }
