@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/push-module-metrics",
-      "schedule": "30 2 * * 1"
+      "schedule": "30 2 * * *"
     }
   ]
 }
