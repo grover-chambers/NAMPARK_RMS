@@ -24,6 +24,7 @@ import {
   FileBarChart,
   User,
   Settings,
+  CalendarRange,
 } from "lucide-react";
 
 interface NavItem {
@@ -46,6 +47,7 @@ const adminNavItems: NavItem[] = [
   { label: "Sales Reps", href: "/reps", icon: <Users size={18} />, roles: ["ADMIN"], section: "Manage" },
   { label: "Vehicles", href: "/vehicles", icon: <Truck size={18} />, roles: ["ADMIN"], section: "Manage" },
   { label: "Performance", href: "/performance", icon: <BarChart3 size={18} />, roles: ["ADMIN"], section: "Analytics" },
+  { label: "Field Data", href: "/field-data", icon: <CalendarRange size={18} />, roles: ["ADMIN", "BRANCH_MANAGER", "HQ_MANAGER", "DIRECTOR"], section: "Analytics" },
   { label: "Missing Items", href: "/missing-items", icon: <AlertTriangle size={18} />, roles: ["ADMIN"], section: "Analytics" },
   { label: "Returns", href: "/returns", icon: <RotateCcw size={18} />, roles: ["ADMIN"], section: "Analytics" },
   { label: "Pricing", href: "/pricing", icon: <DollarSign size={18} />, roles: ["ADMIN"], section: "Analytics" },
@@ -60,6 +62,7 @@ const supervisorNavItems: NavItem[] = [
   { label: "Assignments", href: "/assignments", icon: <CalendarCheck size={18} />, roles: ["SUPERVISOR"] },
   { label: "Report Viewer", href: "/daily-report/view", icon: <FileText size={18} />, roles: ["SUPERVISOR"] },
   { label: "Performance", href: "/performance", icon: <BarChart3 size={18} />, roles: ["SUPERVISOR"] },
+  { label: "Field Data", href: "/field-data", icon: <CalendarRange size={18} />, roles: ["SUPERVISOR"] },
   { label: "Missing Items", href: "/missing-items", icon: <AlertTriangle size={18} />, roles: ["SUPERVISOR"] },
   { label: "Returns", href: "/returns", icon: <RotateCcw size={18} />, roles: ["SUPERVISOR"] },
   { label: "Vehicles", href: "/vehicles", icon: <Truck size={18} />, roles: ["SUPERVISOR"] },
