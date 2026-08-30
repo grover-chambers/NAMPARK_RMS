@@ -36,6 +36,11 @@ interface NavItem {
 }
 
 const adminNavItems: NavItem[] = [
+  { label: "Intelligence", href: "/intelligence", icon: <LayoutDashboard size={18} />, roles: ["ADMIN"], section: "Intelligence" },
+  { label: "Fleet & Assets", href: "/intelligence/fleet", icon: <Truck size={18} />, roles: ["ADMIN"], section: "Intelligence" },
+  { label: "Mapping & Routing", href: "/intelligence/routes", icon: <Route size={18} />, roles: ["ADMIN"], section: "Intelligence" },
+  { label: "Deliveries", href: "/intelligence/deliveries", icon: <Package size={18} />, roles: ["ADMIN"], section: "Intelligence" },
+  { label: "Profitability", href: "/intelligence/profitability", icon: <BarChart3 size={18} />, roles: ["ADMIN"], section: "Intelligence" },
   { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={18} />, roles: ["ADMIN"], section: "Overview" },
   { label: "Weekly Summary", href: "/weekly-summary", icon: <FileBarChart size={18} />, roles: ["ADMIN"], section: "Overview" },
   { label: "Report Viewer", href: "/daily-report/view", icon: <FileText size={18} />, roles: ["ADMIN"], section: "Overview" },
@@ -57,6 +62,11 @@ const adminNavItems: NavItem[] = [
 ];
 
 const supervisorNavItems: NavItem[] = [
+  { label: "Intelligence", href: "/intelligence", icon: <LayoutDashboard size={18} />, roles: ["SUPERVISOR"] },
+  { label: "Fleet & Assets", href: "/intelligence/fleet", icon: <Truck size={18} />, roles: ["SUPERVISOR"] },
+  { label: "Mapping & Routing", href: "/intelligence/routes", icon: <Route size={18} />, roles: ["SUPERVISOR"] },
+  { label: "Deliveries", href: "/intelligence/deliveries", icon: <Package size={18} />, roles: ["SUPERVISOR"] },
+  { label: "Profitability", href: "/intelligence/profitability", icon: <BarChart3 size={18} />, roles: ["SUPERVISOR"] },
   { label: "Dashboard", href: "/dashboard", icon: <LayoutDashboard size={18} />, roles: ["SUPERVISOR"] },
   { label: "Weekly Summary", href: "/weekly-summary", icon: <FileBarChart size={18} />, roles: ["SUPERVISOR"] },
   { label: "Assignments", href: "/assignments", icon: <CalendarCheck size={18} />, roles: ["SUPERVISOR"] },

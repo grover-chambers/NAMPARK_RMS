@@ -8,8 +8,8 @@ import TopNav from "@/components/layout/TopNav";
 import PwaInstallPrompt from "@/components/PwaInstallPrompt";
 
 const roleRoutePrefixes: Record<string, string[]> = {
-  ADMIN: ["/dashboard", "/weekly-summary", "/daily-report/view", "/daily-report/rep", "/daily-report/driver", "/assignments", "/routes", "/drivers", "/vehicles", "/performance", "/field-data", "/missing-items", "/returns", "/pricing", "/inventory", "/challenges", "/settings", "/profile", "/notifications", "/driver/deliveries"],
-  SUPERVISOR: ["/dashboard", "/weekly-summary", "/daily-report/view", "/assignments", "/performance", "/field-data", "/missing-items", "/returns", "/vehicles", "/profile", "/notifications"],
+  ADMIN: ["/intelligence", "/dashboard", "/weekly-summary", "/daily-report/view", "/daily-report/rep", "/daily-report/driver", "/assignments", "/routes", "/drivers", "/vehicles", "/performance", "/field-data", "/missing-items", "/returns", "/pricing", "/inventory", "/challenges", "/settings", "/profile", "/notifications", "/driver/deliveries"],
+  SUPERVISOR: ["/intelligence", "/dashboard", "/weekly-summary", "/daily-report/view", "/assignments", "/performance", "/field-data", "/missing-items", "/returns", "/vehicles", "/profile", "/notifications"],
   SALES_REP: ["/dashboard", "/daily-report/rep", "/missing-items", "/profile", "/notifications"],
   DRIVER: ["/dashboard", "/daily-report/driver", "/returns", "/profile", "/notifications", "/driver/deliveries"],
   CASHIER: ["/cashier", "/profile", "/notifications"],
