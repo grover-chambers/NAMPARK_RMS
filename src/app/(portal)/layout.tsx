@@ -115,6 +115,16 @@ export default function PortalLayout({ children }: { children: React.ReactNode }
     );
   }
 
+  const isImmersive = pathname === "/intelligence" || pathname === "/intelligence/";
+  if (isImmersive) {
+    return (
+      <div className="min-h-screen bg-[#0f1419] text-white flex flex-col">
+        <main className="flex-1 overflow-auto">{children}</main>
+        <PwaInstallPrompt />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-ivory-100">
       <Sidebar />
